@@ -18,7 +18,7 @@
     ],
     "require": {
         "php": ">=5.4",
-		"workerman/workerman": "^4.0"
+        "workerman/workerman": "^V4.0"
     },
     "suggest": {
         "ext-event": "For better performance. "
