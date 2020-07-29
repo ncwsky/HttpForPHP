@@ -24,6 +24,7 @@
         "ext-event": "For better performance. "
     },
     "autoload": {
+        "files":["Load.php"],
         "psr-4": {
             "HttpForPHP\\": "./"
         }
