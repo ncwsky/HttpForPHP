@@ -1,3 +1,7 @@
+使用
+composer require ncwsky/http-for-php
+
+
 如果接入的应用接口里有使用session，将不可用，需要屏蔽此类请求，另做处理。
 demo文件里是yii框架的示例入口文件
 
