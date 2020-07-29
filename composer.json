@@ -1,0 +1,30 @@
+{
+    "name": "ncwsky/http-for-php",
+    "type": "library",
+    "keywords": [
+        "http-php",
+        "workerman"
+    ],
+    "homepage": "https://github.com/ncwsky/HttpForPHP",
+    "license": "MIT",
+    "description": "使用php现成应用框架依赖workerman实现http后端驻入服务",
+    "authors": [
+        {
+            "name": "路人",
+            "email": "ep1086@qq.com",
+            "homepage": "https://github.com/ncwsky/HttpForPHP",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+    },
+    "suggest": {
+        "ext-event": "For better performance. "
+    },
+    "autoload": {
+        "psr-4": {
+            "HttpForPHP\\": "./"
+        }
+    }
+}
