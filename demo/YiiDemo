@@ -1,0 +1,103 @@
+#! /bin/sh
+# chkconfig: 2345 90 10
+# Description: Startup script for YiiDemo on Debian. Place in /etc/init.d and
+# run 'update-rc.d -f YiiDemo defaults', or use the appropriate command on your
+# distro. For CentOS/Redhat run: 'chkconfig --add YiiDemo'
+
+### BEGIN INIT INFO
+# Provides:          YiiDemo
+# Required-Start:	$all
+# Should-Start:		redis
+# Required-Stop:	$all
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts YiiDemo
+# Description:       YiiDemo - http and tcp server
+### END INIT INFO
+
+EXEC="/usr/bin/php /yourpath/YiiDemo.php"  #启动脚本的位置，你如果忘了可以用find或whereis找到 /etc/alternatives/php /usr/bin/php7.0
+PIDFILE=/yourpath/http.pid  #这个也可以用find或whereis找到
+LOGFILE=/yourpath//http.log
+
+case "$1" in
+	start)
+        if [ -f $PIDFILE ];then
+			mPID=`cat $PIDFILE`
+			isStart=`ps ax | awk '{ print $1 }' | grep -e "^${mPID}$"`
+			if [ "$isStart" != '' ];then
+				echo "$NAME (pid `pidof $NAME`) already running."
+				exit 1
+			fi
+		fi
+        
+		echo "Starting YiiDemo ..."
+		$EXEC
+            
+		if [ "$?"="0" ]  #$? 是上一个程序执行是否成功的标志，如果执行成功则$? 为0，否则 不为0
+		then
+			echo "YiiDemo is running..."
+		else
+            echo "failed"
+		fi
+		;;
+	stop)
+		if [ ! -f $PIDFILE ]
+		then
+			echo "$PIDFILE not exists, process is not running."
+		else
+			PID=$(cat $PIDFILE)
+			echo "Stopping..."
+			kill -15 $PID
+			sleep 1
+		   while [ -x $PIDFILE ]
+		   do
+				echo "Waiting for YiiDemo to shutdown..."
+				sleep 1
+			done
+			echo "YiiDemo stopped"
+		fi
+		;;
+	restart)
+		${0} stop
+		${0} start
+		;;
+	reload)
+		if [ ! -f $PIDFILE ]
+		then
+			echo "$PIDFILE not exists, process is not running."
+		else
+			PID=$(cat $PIDFILE)
+			echo $PID" Reloading..."
+			kill -10 $PID
+			echo "YiiDemo reloaded"
+		fi   
+		;;
+	relog)   
+		if [ ! -f $PIDFILE ]   
+		then   
+			echo "$PIDFILE not exists, process is not running."
+		else  
+			PID=$(cat $PIDFILE)
+			echo "Reloging..."
+			rm -f $LOGFILE
+			kill -34 $PID
+			echo "YiiDemo reloged"
+		fi
+		;;
+	status)
+		if [ ! -r $PIDFILE ] ; then
+			echo "YiiDemo is stopped"
+			exit 0
+		fi
+		
+		PID=$(cat $PIDFILE)
+		if ps -p $PID | grep -q $PID; then
+			echo "YiiDemo (pid $PID) is running..."
+		else
+			echo "YiiDemo dead but pid file exists"
+		fi
+		;;
+	*)
+	   echo "Usage: /etc/init.d/YiiDemo {start|stop|restart|reload|relog|status}" >&2
+	   exit 1
+esac

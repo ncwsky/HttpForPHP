@@ -1,6 +1,6 @@
 <?php
 return [
-    'name' => 'Yii', //服务名
+    'name' => 'Yii-Demo', //服务名
     'ip' => '0.0.0.0', //监听地址
     'port' => 6502, //监听地址
     'init_php'=> __DIR__.'/base.php',
