@@ -154,8 +154,10 @@ class WorkerManSrv {
             unset($this->config['setting']['logFile']);
         }
         $context = $this->getConfig('context', []); //资源上下文
-        //创建进程通信服务
-        $this->chainWorker();
+        if($this->getConfig('setting.task_worker_num', 0)){
+            //创建进程通信服务
+            $this->chainWorker();
+        }
 
         //监听1024以下的端口需要root权限
         $this->server = new Worker(self::TYPE_HTTP.'://'.$this->ip.':'.$this->port, $context);
@@ -237,6 +239,8 @@ class WorkerManSrv {
     public static $remoteConnection = null;
     //连接到内部通信服务
     protected function chainConnection($worker){
+        if(!$this->getConfig('setting.task_worker_num', 0)) return;
+
         //生成唯一id
         $uniqid = self::workerToUniqId($worker->port, $worker->id);
         $worker->uniqid = $uniqid;
