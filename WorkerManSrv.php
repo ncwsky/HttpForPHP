@@ -154,6 +154,9 @@ class WorkerManSrv {
             unset($this->config['setting']['logFile']);
         }
         $context = $this->getConfig('context', []); //资源上下文
+        //创建进程通信服务
+        $this->chainWorker();
+
         //监听1024以下的端口需要root权限
         $this->server = new Worker(self::TYPE_HTTP.'://'.$this->ip.':'.$this->port, $context);
         $this->address = self::TYPE_HTTP;
@@ -185,9 +188,6 @@ class WorkerManSrv {
 
         //主进程回调
         $this->onStart($server);
-
-        //创建进程通信服务
-        $this->chainWorker();
 
         //绑定事件
         $server->onConnect= ['\HttpForPHP\WorkerManEvent', 'onConnect'];
@@ -275,15 +275,15 @@ class WorkerManSrv {
     }
     //创建进程通信服务
     public function chainWorker(){
-        $socketFile = $this->runDir.'/'.$this->server->name.'_chain.sock';
-        $socketFile = '/dev/shm/' . $this->server->name . '_chain.sock';
+        $socketFile = $this->runDir.'/'.$this->serverName().'_chain.sock';
+        $socketFile = '/dev/shm/' . $this->serverName() . '_chain.sock';
         if (file_exists($socketFile)) {
             @unlink($socketFile);
         }
         self::$chainSocketFile = $socketFile;
         $chainWorker = new Worker('unix://'.$socketFile);
         $chainWorker->user = $this->getConfig('setting.user', '');
-        $chainWorker->name = $this->server->name.'_chain';
+        $chainWorker->name = $this->serverName().'_chain';
         $chainWorker->protocol = '\Workerman\Protocols\Frame';
         $chainWorker->channles = []; //记录连接的wokerid
         $chainWorker->onMessage = function ($connection, $data) use ($chainWorker) {
