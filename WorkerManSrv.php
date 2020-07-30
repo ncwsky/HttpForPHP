@@ -209,6 +209,7 @@ class WorkerManSrv {
             $taskWorker = new Worker('frame://'.self::$taskAddr);
             $taskWorker->ip = '127.0.0.1';
             $taskWorker->port = $taskPort;
+            $taskWorker->user = $this->getConfig('setting.user', '');
             $taskWorker->name = $server->name.'_task';
             $taskWorker->count = $this->getConfig('setting.task_worker_num', 0); #unix://不支持多worker进程
             //初始进程事件绑定
@@ -281,6 +282,7 @@ class WorkerManSrv {
         }
         self::$chainSocketFile = $socketFile;
         $chainWorker = new Worker('unix://'.$socketFile);
+        $chainWorker->user = $this->getConfig('setting.user', '');
         $chainWorker->name = $this->server->name.'_chain';
         $chainWorker->protocol = '\Workerman\Protocols\Frame';
         $chainWorker->channles = []; //记录连接的wokerid
