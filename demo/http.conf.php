@@ -22,6 +22,11 @@ return [
             Yii::$app->response->clear();
             // 设置请求头
             $headers = $req->header();
+            if(isset($headers['accept'])){
+                $headers['accept'] = str_replace('/xml','/json',$headers['accept']);
+            }else{
+                $headers['accept'] = '*/*';
+            }
             foreach ($headers as $name=>$value){
                 Yii::$app->request->headers->add($name, $value);
             }
@@ -46,7 +51,7 @@ return [
             if(strpos($msg, 'MySQL server has gone away') || strpos($msg, 'Error while sending QUERY')){
                 \Workerman\Worker::stopAll();
             }
-            if($msg!='页面未找到。'){
+            if($msg!='Page not found.' && $msg!='页面未找到。'){
                 \HttpForPHP\Log::write($e->getCode().':'.$msg.$e->getTraceAsString(), 'err');
             }
             echo \HttpForPHP\Helper::toJson(\HttpForPHP\Helper::fail($e->getCode().':'.$msg));
@@ -68,8 +73,8 @@ return [
         return true;
     },
     'setting' => [
-        'count' => 1,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
-        'task_worker_num'=> 1, //异步任务进程数
+        'count' => 10,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
+        #'task_worker_num'=> 1, //异步任务进程数
         'stdoutFile'=> __DIR__ . '/stdout.log', //终端输出
         'pidFile' => __DIR__ . '/http.pid',
         'logFile' => __DIR__ . '/http.log', //日志文件
