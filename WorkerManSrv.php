@@ -132,7 +132,7 @@ class WorkerManSrv {
         self::err($err);
         $this->onWorkerError($connection, $code, $msg);
     }
-    protected function onWorkerError(TcpConnection $connection, $code, $msg){}
+    public function onWorkerError(TcpConnection $connection, $code, $msg){}
 
     //reloadable为false时 可以此重载回调重新载入配置等操作
     public function onWorkerReload(Worker $worker){
