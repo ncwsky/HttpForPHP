@@ -21,6 +21,7 @@ return [
             Yii::$app->request->getHeaders()->removeAll();
             Yii::$app->response->clear();
             // 设置请求头
+            Yii::$app->request->headers->add('Accept', '*/*');
             $headers = $req->header();
             if(isset($headers['accept'])){
                 $headers['accept'] = str_replace('/xml','/json',$headers['accept']);
@@ -44,13 +45,26 @@ return [
 
             Yii::$app->run();
 
-             #return ob_get_clean(); #直接返回内容使用json方式输出
+            #return ob_get_clean(); #直接返回内容使用json方式输出
         }catch(\Exception $e){
             $msg = $e->getMessage();
-            #因mysql断开重启进程
-            if(strpos($msg, 'MySQL server has gone away') || strpos($msg, 'Error while sending QUERY')){
-                \Workerman\Worker::stopAll();
+            $failReloadMsg = [
+                'MySQL server has gone away',
+                'Failed to write to socket', #Failed to write to socket. 0 of 34 bytes written.
+                'Failed to read from socket',
+                'Error while sending QUERY'
+            ];
+            #因m异常断开重启进程
+            foreach ($failReloadMsg as $fail){
+                if(strpos($msg, $fail)){
+                    \HttpForPHP\Log::write($e->getCode().':'.$msg, 'err');
+                    \Workerman\Worker::stopAll();
+                    break;
+                }
             }
+            /*if(strpos($msg, 'MySQL server has gone away') || strpos($msg, 'Error while sending QUERY')){
+                \Workerman\Worker::stopAll();
+            }*/
             if($msg!='Page not found.' && $msg!='页面未找到。'){
                 \HttpForPHP\Log::write($e->getCode().':'.$msg.$e->getTraceAsString(), 'err');
             }
@@ -61,6 +75,8 @@ return [
         $code = 200;
         $header = ['Content-Type'=>'application/json; charset=utf-8'];
         if($req->path()=='/sms/captcha' && !$req->get('base64')){ #验证码
+            $header['Content-Type'] = 'image/png';
+        }elseif($req->path()=='/default/qrcode'){
             $header['Content-Type'] = 'image/png';
         }
         // 发送状态码
@@ -73,7 +89,7 @@ return [
         return true;
     },
     'setting' => [
-        'count' => 10,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
+        'count' => 5,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
         #'task_worker_num'=> 1, //异步任务进程数
         'stdoutFile'=> __DIR__ . '/stdout.log', //终端输出
         'pidFile' => __DIR__ . '/http.pid',
