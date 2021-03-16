@@ -34,7 +34,7 @@ class WorkerManSrv {
         $this->runFile = $_SERVER['SCRIPT_FILENAME'];
         $this->runDir = dirname($this->runFile);
         $this->config = $config;
-        $this->pidFile = $this->getConfig('setting.pid_file', $this->runDir .'/server.pid');
+        $this->pidFile = $this->getConfig('setting.pidFile', $this->runDir .'/server.pid');
         $this->ip = $this->getConfig('ip', '0.0.0.0');
         $this->port = $this->getConfig('port', 7900);
     }
@@ -232,7 +232,7 @@ class WorkerManSrv {
                     call_user_func($this->server->onTask, $taskWorker->id, $this->server->id, $data);
                 }
             };
-            $taskWorker->listen();
+            //$taskWorker->listen();
             self::$taskWorker = $taskWorker;
         }
     }
