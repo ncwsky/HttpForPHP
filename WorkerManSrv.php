@@ -12,13 +12,11 @@ class WorkerManSrv {
     use SrvMsg;
     //全局变量存放 仅当前的工作进程有效[参见进程隔离]
     public static $isConsole = false;
-    public static $runApp = null;
     public static $runConfig = null;
     protected $config;
     protected $runFile;
     public $runDir;
     protected $pidFile;
-    protected $pid;
     protected $address;
     public $port;
     protected $ip;
@@ -116,8 +114,7 @@ class WorkerManSrv {
         $worker_id = $worker->id;
         #引入框架配置
         $this->initMyPhp();
-        #Worker::safeEcho("init myphp:".$worker_id.PHP_EOL);
-        #if($worker_id==0 && self::$isConsole) Log::write($_SERVER, 'server');
+        if($worker_id==0 && self::$isConsole) Log::write($_SERVER, 'server');
 
         //连接到内部通信服务
         $this->chainConnection($worker);
@@ -226,10 +223,10 @@ class WorkerManSrv {
                 $connection->send($taskWorker->id); //返回进程id
             };
             $taskWorker->onMessage = function ($connection, $data) use ($taskWorker) {
-                $data = unserialize($data);
-                $ret = null;
+                $src_worker_id = unpack('n', $data)[1];
+                $data = unserialize(substr($data,2));
                 if($this->server->onTask){
-                    call_user_func($this->server->onTask, $taskWorker->id, $this->server->id, $data);
+                    call_user_func($this->server->onTask, $taskWorker->id, $src_worker_id, $data);
                 }
             };
             //$taskWorker->listen();
@@ -389,6 +386,12 @@ class WorkerManSrv {
     public function workerId(){
         return $this->server->id;
     }
+
+    /**
+     * 异步任务
+     * @param mixed $data
+     * @return bool|int
+     */
     public function task($data){
         //创建异步任务连接
         #echo 'init task conn',PHP_EOL;
@@ -402,17 +405,17 @@ class WorkerManSrv {
         $taskConn->send(serialize($data));
         $taskConn->connect();*/
 
-        $fp = stream_socket_client("tcp://".self::$taskAddr, $errno, $errstr, 1);
+        $fp = stream_socket_client("tcp://" . self::$taskAddr, $errno, $errstr, 1);
         if (!$fp) {
-            #echo "$errstr ($errno)",PHP_EOL;
             self::err("$errstr ($errno)");
             return false;
         } else {
-            $taskId = (int)substr(fread($fp, 10),4);
+            $worker_id = $this->server->id;
+            $taskId = (int)substr(fread($fp, 10), 4);
             $send_data = serialize($data);
-            $len = strlen($send_data)+4;
-            $send_data = pack('N', $len) . $send_data;
-            if(!fwrite($fp, $send_data, $len)){
+            $len = 4 + 2 + strlen($send_data);
+            $send_data = pack('N', $len) . pack('n', $worker_id) . $send_data;
+            if (!fwrite($fp, $send_data, $len)) {
                 $taskId = false;
             }
             fclose($fp);

@@ -4,93 +4,108 @@ return [
     'ip' => '0.0.0.0', //监听地址
     'port' => 6502, //监听地址
     'init_php'=> __DIR__.'/base.php',
-    'php_run'=> function(\Workerman\Protocols\Http\Request $req, \Workerman\Connection\TcpConnection $connection=null) {
+    'php_run'=> function($req, \Workerman\Connection\TcpConnection $connection=null) {
         static $request_count;
-        // 业务处理略
-        if(++$request_count > 10000) {
-            // 请求数达到10000后退出当前进程，主进程会自动重启一个新的进程
-            \Workerman\Worker::stopAll();
-        }
-
+        /**
+         * 异步任务时$req是数组
+         * @var \Workerman\Protocols\Http\Request|array $req
+         */
         ob_start();
+        $app = Yii::$app;
+        $req_is_array = is_array($req);
+
+        // 设置请求头
+        $headers = $req_is_array ? $req['header'] : $req->header();
+        if(isset($headers['accept'])){
+            $headers['accept'] = str_replace('/xml','/json',$headers['accept']);
+        }else{
+            $headers['accept'] = '*/*';
+        }
+        foreach ($headers as $name=>$value){
+            $app->request->headers->add($name, $value);
+        }
+        $app->request->headers->add('Accept', '*/*');
+        // 设置请求参数
+        $app->request->setHostInfo(null);
+        $app->request->setBaseUrl(null);
+        $app->request->setScriptUrl(null);
+        $app->request->setPathInfo(null);
+        $app->request->setUrl(null);
+        $app->request->setQueryParams($_GET);
+        $app->request->setBodyParams($_POST);
+        $app->request->setRawBody($req_is_array ? $req['rawbody'] : $req->rawBody());
+
+        $uri_name = trim($_SERVER["PATH_INFO"],'/');
+
         try{
-            /*$_SERVER['DOCUMENT_ROOT'] = dirname($_SERVER['SCRIPT_FILENAME']);
-            $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';*/
-
-            // 常驻服务需要清除信息
-            Yii::$app->request->getHeaders()->removeAll();
-            Yii::$app->response->clear();
-            // 设置请求头
-            Yii::$app->request->headers->add('Accept', '*/*');
-            $headers = $req->header();
-            if(isset($headers['accept'])){
-                $headers['accept'] = str_replace('/xml','/json',$headers['accept']);
-            }else{
-                $headers['accept'] = '*/*';
-            }
-            foreach ($headers as $name=>$value){
-                Yii::$app->request->headers->add($name, $value);
-            }
-            // 设置请求参数
-            Yii::$app->request->setHostInfo(null);
-            Yii::$app->request->setBaseUrl(null);
-            Yii::$app->request->setScriptUrl(null);
-            Yii::$app->request->setPathInfo(null);
-            Yii::$app->request->setUrl(null);
-            $_SERVER['REQUEST_METHOD'] = $req->method();
-            Yii::$app->request->setQueryParams($req->get());
-            Yii::$app->request->setQueryParams($req->get());
-            Yii::$app->request->setBodyParams($req->post());
-            Yii::$app->request->setRawBody($req->rawBody());
-
-            Yii::$app->run();
-
-            #return ob_get_clean(); #直接返回内容使用json方式输出
+            $app->run();
         }catch(\Exception $e){
             $msg = $e->getMessage();
             $failReloadMsg = [
                 'MySQL server has gone away',
                 'Failed to write to socket', #Failed to write to socket. 0 of 34 bytes written.
                 'Failed to read from socket',
-                'Error while sending QUERY'
+                'Error while sending QUERY',
+                'read error on connection to', #read error on connection to 192.168.0.186:6379
             ];
             #因m异常断开重启进程
             foreach ($failReloadMsg as $fail){
-                if(strpos($msg, $fail)){
-                    \HttpForPHP\Log::write($e->getCode().':'.$msg, 'err');
+                if(strpos($msg, $fail)!==false){
+                    \HttpForPHP\Log::write(sprintf('line:%s, file:%s, err:%s, trace:%s',$e->getLine(), $e->getFile(), $e->getMessage(), $e->getTraceAsString()), 'err');
                     \Workerman\Worker::stopAll();
                     break;
                 }
             }
-            /*if(strpos($msg, 'MySQL server has gone away') || strpos($msg, 'Error while sending QUERY')){
-                \Workerman\Worker::stopAll();
-            }*/
+
             if($msg!='Page not found.' && $msg!='页面未找到。'){
-                \HttpForPHP\Log::write($e->getCode().':'.$msg.$e->getTraceAsString(), 'err');
+                $info = sprintf('method:%s, query_str:%s', $_SERVER['REQUEST_METHOD'], $_SERVER['QUERY_STRING']);
+
+                \HttpForPHP\Log::write(sprintf('line:%s, file:%s, err:%s, trace:%s',$e->getLine(), $e->getFile(), $e->getMessage(), $e->getTraceAsString()), 'err');
             }
+
             echo \HttpForPHP\Helper::toJson(\HttpForPHP\Helper::fail($e->getCode().':'.$msg));
         }
         $content = ob_get_clean();
 
-        $code = 200;
-        $header = ['Content-Type'=>'application/json; charset=utf-8'];
-        if($req->path()=='/sms/captcha' && !$req->get('base64')){ #验证码
-            $header['Content-Type'] = 'image/png';
-        }elseif($req->path()=='/default/qrcode'){
-            $header['Content-Type'] = 'image/png';
+        // 常驻服务需要清除信息
+        $app->request->getHeaders()->removeAll();
+        $app->response->clear();
+
+        if($connection===null){
+            \HttpForPHP\Log::write($content, 'task');
+        }else{
+            $code = 200;
+            $header = ['Content-Type'=>'application/json; charset=utf-8'];
+            if($_SERVER["PATH_INFO"]=='/default/qrcode'){
+                if($app->request->get('data')){
+                    $header['Content-Type'] = 'image/png';
+                    if($app->request->get('down')){
+                        $header['Content-Disposition'] = 'attachment;filename=qr.png';
+                    }
+                }
+            }
+            $header['X-Req'] = 'demo';
+            // 发送状态码
+            $response = new \Workerman\Protocols\Http\Response($code);
+            // 发送头部信息
+            $response->withHeaders($header);
+            // 发送内容
+            $response->withBody(is_string($content) ? $content : \HttpForPHP\toJson($content));
+            $connection->send($response);
         }
-        // 发送状态码
-        $response = new \Workerman\Protocols\Http\Response($code);
-        // 发送头部信息
-        $response->withHeaders($header);
-        // 发送内容
-        $response->withBody(is_string($content) ? $content : \HttpForPHP\toJson($content));
-        $connection->send($response);
+
+        unset($content);
+
+        // 可能存在不规范的代码造成内存泄露 这里达到一定请求释放下内存
+        if(++$request_count > 200) {
+            // 请求数达到xxx后退出当前进程，主进程会自动重启一个新的进程
+            \Workerman\Worker::stopAll();
+        }
         return true;
     },
     'setting' => [
-        'count' => 5,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
-        #'task_worker_num'=> 1, //异步任务进程数
+        'count' => 20,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
+        #'task_worker_num'=> 10, //异步任务进程数
         'stdoutFile'=> __DIR__ . '/stdout.log', //终端输出
         'pidFile' => __DIR__ . '/http.pid',
         'logFile' => __DIR__ . '/http.log', //日志文件

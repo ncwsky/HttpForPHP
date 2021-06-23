@@ -2,6 +2,7 @@
 namespace HttpForPHP;
 defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 
+use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 
@@ -18,6 +19,7 @@ class WorkerManEvent{
         $_GET = $req->get();
         $_POST = $req->post();
         $_REQUEST = array_merge($_GET, $_POST);
+
         $_SERVER['REMOTE_ADDR'] = $connection->getRemoteIp();
         if($xRealIp=$req->header('x-real-ip')){
             $_SERVER['HTTP_X_REAL_IP'] = $xRealIp;
@@ -29,7 +31,9 @@ class WorkerManEvent{
         $_SERVER['HTTP_HOST'] = $req->host();
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['PHP_SELF'] = '/index.php';#$req->path();
+        $_SERVER['REQUEST_METHOD'] = $req->method();
         $_SERVER["REQUEST_URI"] = $req->uri();
+        $_SERVER["PATH_INFO"] = $req->path();
         $_SERVER['QUERY_STRING'] = $req->queryString();
         #$_SERVER['DOCUMENT_ROOT'] = dirname($_SERVER['SCRIPT_FILENAME']);
         #$_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';
@@ -44,12 +48,17 @@ class WorkerManEvent{
         }
 
         if (Q(ASYNC_NAME .'%d')==1) { //异步任务
-            $task_id = WorkerManSrv::$instance->task([
-                '_SERVER'=>$_SERVER,
-                '_REQUEST'=>$_REQUEST,
+            $data = [
+                '_COOKIE'=>$_COOKIE,
+                '_FILES'=>$_FILES,
                 '_GET'=>$_GET,
-                '_POST'=>$_POST
-            ]);
+                '_POST'=>$_POST,
+                '_REQUEST'=>$_REQUEST,
+                '_SERVER'=>$_SERVER,
+                'header'=>$req->header(),
+                'rawbody'=>$req->rawBody()
+            ];
+            $task_id = WorkerManSrv::$instance->task($data); #
             $response = new \Workerman\Protocols\Http\Response(200, [
                 'Content-Type'=>'application/json; charset=utf-8'
             ]);
@@ -90,17 +99,18 @@ class WorkerManEvent{
         $connection->resumeRecv(); //恢复接收
     }
     //异步任务 在task_worker进程内被调用
-    public static function onTask(int $task_id, int $src_worker_id, $data){
+    public static function onTask($task_id, $src_worker_id, $data){
         //重置
-        $_SERVER = $data['_SERVER'];
-        $_REQUEST = $data['_REQUEST'];
+        $_COOKIE = $data['_COOKIE'];
+        $_FILES = $data['_FILES'];
         $_GET = $data['_GET'];
         $_POST = $data['_POST'];
-
+        $_REQUEST = $data['_REQUEST'];
+        $_SERVER = $data['_SERVER'];
         #逻辑处理
         $content = WorkerManSrv::$instance->phpRun($data);
 
-        if(WorkerManSrv::$isConsole) echo "AsyncTask Finish:Connect.task_id=" . $task_id . (is_string($content) ? $content : toJson($content)). PHP_EOL;
+        if(WorkerManSrv::$isConsole) Worker::safeEcho('AsyncTask Finish, worker_id:'.$src_worker_id.', task_id:' . $task_id . ', result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL);
         return true;
     }
 }
