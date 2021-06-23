@@ -240,6 +240,6 @@ class Log{
 			clearstatcache(true, $file);
 		}
 		if($level && $level!='_def') $msg = '['.date('Y-m-d H:i:s').']['.$level.'] '.$msg."\r\n";
-		$fp ? fwrite($fp, $msg, strlen($msg)+1) : error_log($msg, 3, $file);
+		$fp ? fwrite($fp, $msg, strlen($msg)+1) : file_put_contents($file, $msg, FILE_APPEND);
     }
 }
