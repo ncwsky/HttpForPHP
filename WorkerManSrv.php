@@ -21,6 +21,7 @@ class WorkerManSrv {
     public $port;
     protected $ip;
     public static $instance;
+    public static $command = '';
     const TYPE_HTTP = 'http';
     /**
      * SrvBase constructor.
@@ -36,14 +37,7 @@ class WorkerManSrv {
         $this->ip = $this->getConfig('ip', '0.0.0.0');
         $this->port = $this->getConfig('port', 7900);
     }
-    public function __destruct()
-    {
-        $timerFile = self::$instance->getConfig('timer_file');
-        $shmFile =  $timerFile ? '/dev/shm/'.str_replace(['/','\\'],'',  $timerFile) : '';
-        if(file_exists($shmFile)){ //销毁定时内存缓存配置
-            @unlink($shmFile);
-        }
-    }
+
     public function getConfig($name, $def=''){
         //获取值
         if (false === ($pos = strpos($name, '.')))
@@ -90,8 +84,8 @@ class WorkerManSrv {
         return true;
     }
     protected function onWorkerStart($server, $worker_id){
-        if($worker_id==0){ //
-            //todo 清理上次服务的全局缓存数据
+        if($worker_id==0){
+            //todo
         }
     }
     /**
@@ -197,8 +191,8 @@ class WorkerManSrv {
 
         $server->onTask = null;
         if ($this->getConfig('setting.task_worker_num', 0) && !self::$taskWorker) { //启用了
+
             $server->onTask = function ($task_id, $src_worker_id, $data){
-                #echo 'taskId:',$task_id,'; src_workerId:',$src_worker_id,PHP_EOL;
                 return WorkerManEvent::OnTask($task_id, $src_worker_id, $data);
             };
 
@@ -229,9 +223,12 @@ class WorkerManSrv {
                     call_user_func($this->server->onTask, $taskWorker->id, $src_worker_id, $data);
                 }
             };
-            //$taskWorker->listen();
             self::$taskWorker = $taskWorker;
         }
+        #重载、结束时销毁处理
+        Worker::$onMasterReload = Worker::$onMasterStop = function (){
+            self::$chainSocketFile && file_exists(self::$chainSocketFile) && @unlink(self::$chainSocketFile);
+        };
     }
     public static $remoteConnection = null;
     //连接到内部通信服务
@@ -276,11 +273,9 @@ class WorkerManSrv {
     }
     //创建进程通信服务
     public function chainWorker(){
-        $socketFile = $this->runDir.'/'.$this->serverName().'_chain.sock';
-        $socketFile = '/dev/shm/' . $this->serverName() . '_chain.sock';
-        if (file_exists($socketFile)) {
-            @unlink($socketFile);
-        }
+        $socketFile = (is_dir('/dev/shm') ? '/dev/shm/' : $this->runDir) . '/' . $this->serverName() . '_chain.sock';
+        self::$command == 'start' && file_exists($socketFile) && @unlink($socketFile);
+
         self::$chainSocketFile = $socketFile;
         $chainWorker = new Worker('unix://'.$socketFile);
         $chainWorker->user = $this->getConfig('setting.user', '');
@@ -510,6 +505,7 @@ class WorkerManSrv {
         self::$isConsole = array_search('--console', $argv);
         if($action=='--console') $action = 'start';
         $argv[1] = $action; //置启动参数
+        self::$command = $action;
         switch($action){
             case 'relog':
                 $this->relog();
