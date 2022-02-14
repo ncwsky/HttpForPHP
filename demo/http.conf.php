@@ -22,9 +22,8 @@ return [
             $headers['accept'] = '*/*';
         }
         foreach ($headers as $name=>$value){
-            $app->request->headers->add($name, $value);
+            $app->request->headers->set($name, $value);
         }
-        $app->request->headers->add('Accept', '*/*');
         // 设置请求参数
         $app->request->setHostInfo(null);
         $app->request->setBaseUrl(null);

@@ -15,7 +15,4 @@ $config = yii\helpers\ArrayHelper::merge(
 );
 \HttpForPHP\WorkerManSrv::$runConfig = $config;
 
-$_SERVER['DOCUMENT_ROOT'] = dirname($_SERVER['SCRIPT_FILENAME']);
-$_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';
-
 (new yii\web\Application(\HttpForPHP\WorkerManSrv::$runConfig))->init();

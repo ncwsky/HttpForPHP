@@ -37,7 +37,6 @@ class WorkerManSrv {
         $this->pidFile = $this->getConfig('setting.pidFile', $this->runDir .'/server.pid');
         $this->ip = $this->getConfig('ip', '0.0.0.0');
         $this->port = $this->getConfig('port', 7900);
-        self::$_SERVER = $_SERVER; //存放初始的$_SERVER
     }
 
     public function getConfig($name, $def=''){
@@ -108,6 +107,7 @@ class WorkerManSrv {
         $worker_id = $worker->id;
         #引入框架配置
         $this->initMyPhp();
+        self::$_SERVER = $_SERVER; //存放初始的$_SERVER
         if($worker_id==0 && self::$isConsole) Log::write($_SERVER, 'server');
 
         //连接到内部通信服务

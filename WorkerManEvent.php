@@ -14,7 +14,7 @@ class WorkerManEvent{
     //接收到数据时回调此函数
     public static function onReceive(TcpConnection $connection, Request $req){
         //重置
-        $_SERVER = WorkerManSrv::$_SERVER; //使用初始的server 防止server一直增加数据
+        $_SERVER = WorkerManSrv::$_SERVER; //使用初始的server
         $_COOKIE = $req->cookie();
         $_FILES = $req->file();
         $_GET = $req->get();
@@ -31,6 +31,8 @@ class WorkerManEvent{
             Helper::$isProxy = true;
         }
         $_SERVER['HTTP_HOST'] = $req->host();
+        $_SERVER['DOCUMENT_ROOT'] = dirname($_SERVER['SCRIPT_FILENAME']);
+        $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['PHP_SELF'] = '/index.php';#$req->path();
         $_SERVER["REQUEST_URI"] = $req->uri();
