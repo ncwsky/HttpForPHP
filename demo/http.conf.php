@@ -90,7 +90,11 @@ return [
             // 发送头部信息
             $response->withHeaders($header);
             // 发送内容
-            $response->withBody(is_string($content) ? $content : \HttpForPHP\toJson($content));
+            if (is_string($content)) {
+                $content !== '' && $response->withBody($content);
+            } else {
+                $response->withBody(\HttpForPHP\toJson($content));
+            }
             $connection->send($response);
         }
 

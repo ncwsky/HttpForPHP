@@ -14,41 +14,37 @@ class WorkerManEvent{
     //接收到数据时回调此函数
     public static function onReceive(TcpConnection $connection, Request $req){
         //重置
+        $_SERVER = WorkerManSrv::$_SERVER; //使用初始的server 防止server一直增加数据
         $_COOKIE = $req->cookie();
         $_FILES = $req->file();
         $_GET = $req->get();
         $_POST = $req->post();
         $_REQUEST = array_merge($_GET, $_POST);
-
         $_SERVER['REMOTE_ADDR'] = $connection->getRemoteIp();
-        if($xRealIp=$req->header('x-real-ip')){
-            $_SERVER['HTTP_X_REAL_IP'] = $xRealIp;
-            $_SERVER['REMOTE_ADDR'] = $xRealIp;
+        $_SERVER['REQUEST_METHOD'] = $req->method();
+        foreach ($req->header() as $k=>$v){
+            $k = ($k == 'content-type' || $k == 'content-length' ? '' : 'HTTP_') . str_replace('-', '_', strtoupper($k));
+            $_SERVER[$k] = $v;
         }
-        if($xForwardedFor=$req->header('x-forwarded-for')){
-            $_SERVER['HTTP_X_FORWARDED_FOR'] = $xForwardedFor;
+        //客户端的真实IP
+        if($req->header('x-real-ip') || $req->header('x-forwarded-for')) { // HTTP_X_REAL_IP HTTP_X_FORWARDED_FOR
+            Helper::$isProxy = true;
         }
         $_SERVER['HTTP_HOST'] = $req->host();
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['PHP_SELF'] = '/index.php';#$req->path();
-        $_SERVER['REQUEST_METHOD'] = $req->method();
         $_SERVER["REQUEST_URI"] = $req->uri();
-        $_SERVER["PATH_INFO"] = $req->path();
         $_SERVER['QUERY_STRING'] = $req->queryString();
-        #$_SERVER['DOCUMENT_ROOT'] = dirname($_SERVER['SCRIPT_FILENAME']);
-        #$_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';
-        #Log::DEBUG('[http]'.toJson($_REQUEST));
-        #Log::DEBUG('[http_srv]'.toJson($_SERVER));
 
         //ip验证
-        if(!verify_ip()){
-            Log::trace('[http]'.Helper::getIp().urldecode(http_build_query($_REQUEST)));
+        if (!verify_ip()) {
+            Log::trace('[' . $_SERVER['REQUEST_METHOD'] . ']' . Helper::getIp() . ' ' . $_SERVER["REQUEST_URI"] . ($_SERVER['REQUEST_METHOD'] == 'POST' ? PHP_EOL . 'post:' . Helper::toJson($_POST) : ''));
             $connection->send(Helper::toJson(Helper::fail('ip fail')));
             return;
         }
 
         if (Q(ASYNC_NAME .'%d')==1) { //异步任务
-            $data = [
+            $task_id = WorkerManSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,
                 '_GET'=>$_GET,
@@ -57,8 +53,7 @@ class WorkerManEvent{
                 '_SERVER'=>$_SERVER,
                 'header'=>$req->header(),
                 'rawbody'=>$req->rawBody()
-            ];
-            $task_id = WorkerManSrv::$instance->task($data); #
+            ]);
             $response = new \Workerman\Protocols\Http\Response(200, [
                 'Content-Type'=>'application/json; charset=utf-8'
             ]);
@@ -79,7 +74,11 @@ class WorkerManEvent{
                 // 发送头部信息
                 $response->withHeaders($header);
                 // 发送内容
-                $response->withBody(is_string($content) ? $content : toJson($content));
+                if (is_string($content)) {
+                    $content !== '' && $response->withBody($content);
+                } else {
+                    $response->withBody(toJson($content));
+                }
                 $connection->send($response);
             }
         }
@@ -100,13 +99,6 @@ class WorkerManEvent{
     }
     //异步任务 在task_worker进程内被调用
     public static function onTask($task_id, $src_worker_id, $data){
-        //重置
-        $_COOKIE = $data['_COOKIE'];
-        $_FILES = $data['_FILES'];
-        $_GET = $data['_GET'];
-        $_POST = $data['_POST'];
-        $_REQUEST = $data['_REQUEST'];
-        $_SERVER = $data['_SERVER'];
         #逻辑处理
         $content = WorkerManSrv::$instance->phpRun($data);
 

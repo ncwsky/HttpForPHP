@@ -11,6 +11,7 @@ use Workerman\Connection\TcpConnection;
 class WorkerManSrv {
     use SrvMsg;
     //全局变量存放 仅当前的工作进程有效[参见进程隔离]
+    public static $_SERVER;
     public static $isConsole = false;
     public static $runConfig = null;
     protected $config;
@@ -36,6 +37,7 @@ class WorkerManSrv {
         $this->pidFile = $this->getConfig('setting.pidFile', $this->runDir .'/server.pid');
         $this->ip = $this->getConfig('ip', '0.0.0.0');
         $this->port = $this->getConfig('port', 7900);
+        self::$_SERVER = $_SERVER; //存放初始的$_SERVER
     }
 
     public function getConfig($name, $def=''){
@@ -83,10 +85,8 @@ class WorkerManSrv {
         //此回调有错误时 可能不会有主进程 只有通过管理进程进行结束
         return true;
     }
-    protected function onWorkerStart($server, $worker_id){
-        if($worker_id==0){
-            //todo
-        }
+    public function onWorkerStart($server, $worker_id){
+        //todo
     }
     /**
      * @var Worker $server
@@ -217,9 +217,9 @@ class WorkerManSrv {
                 $connection->send($taskWorker->id); //返回进程id
             };
             $taskWorker->onMessage = function ($connection, $data) use ($taskWorker) {
-                $src_worker_id = unpack('n', $data)[1];
-                $data = unserialize(substr($data,2));
                 if($this->server->onTask){
+                    $src_worker_id = unpack('n', $data)[1];
+                    $data = unserialize(substr($data,2));
                     call_user_func($this->server->onTask, $taskWorker->id, $src_worker_id, $data);
                 }
             };
@@ -389,17 +389,6 @@ class WorkerManSrv {
      */
     public function task($data){
         //创建异步任务连接
-        #echo 'init task conn',PHP_EOL;
-        #$taskConn = new TcpConnection(stream_socket_client( "tcp://".self::$taskAddr));
-        #$taskConn->protocol = '\Workerman\Protocols\Frame';
-       /* $taskConn = new \Workerman\Connection\AsyncTcpConnection('frame://'.self::$taskAddr);
-        $taskConn->taskId = false;
-        $taskConn->onMessage = function ($connection, $data) use(&$taskConn){
-            $taskConn->taskId = $data;
-        };
-        $taskConn->send(serialize($data));
-        $taskConn->connect();*/
-
         $fp = stream_socket_client("tcp://" . self::$taskAddr, $errno, $errstr, 1);
         if (!$fp) {
             self::err("$errstr ($errno)");
