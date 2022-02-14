@@ -75,7 +75,7 @@ return [
             \HttpForPHP\Log::write($content, 'task');
         }else{
             $code = 200;
-            $header = ['Content-Type'=>'application/json; charset=utf-8'];
+            $header = ['Content-Type'=>'application/json; charset=utf-8','Access-Control-Allow-Origin'=>'*'];
             if($_SERVER["PATH_INFO"]=='/default/qrcode'){
                 if($app->request->get('data')){
                     $header['Content-Type'] = 'image/png';

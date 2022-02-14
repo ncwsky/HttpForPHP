@@ -34,6 +34,7 @@ class WorkerManEvent{
         $_SERVER['SCRIPT_NAME'] = '/index.php';
         $_SERVER['PHP_SELF'] = '/index.php';#$req->path();
         $_SERVER["REQUEST_URI"] = $req->uri();
+        $_SERVER["PATH_INFO"] = $req->path();
         $_SERVER['QUERY_STRING'] = $req->queryString();
 
         //ip验证
