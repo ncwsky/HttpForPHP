@@ -97,7 +97,6 @@ return [
             }
             $connection->send($response);
         }
-
         unset($content);
 
         // 可能存在不规范的代码造成内存泄露 这里达到一定请求释放下内存
