@@ -102,6 +102,13 @@ class WorkerManEvent{
     }
     //异步任务 在task_worker进程内被调用
     public static function onTask($task_id, $src_worker_id, $data){
+        //重置
+        $_COOKIE = $data['_COOKIE'];
+        $_FILES = $data['_FILES'];
+        $_GET = $data['_GET'];
+        $_POST = $data['_POST'];
+        $_REQUEST = $data['_REQUEST'];
+        $_SERVER = $data['_SERVER'];
         #逻辑处理
         $content = WorkerManSrv::$instance->phpRun($data);
 

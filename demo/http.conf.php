@@ -70,7 +70,7 @@ return [
         $app->request->getHeaders()->removeAll();
         $app->response->clear();
 
-        if($connection===null){
+        if($connection===null){ //是异步任务
             \HttpForPHP\Log::write($content, 'task');
         }else{
             $code = 200;
