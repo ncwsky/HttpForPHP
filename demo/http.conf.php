@@ -6,6 +6,24 @@ return [
     'init_php'=> __DIR__.'/base.php',
     'php_run'=> function($req, \Workerman\Connection\TcpConnection $connection=null) {
         static $request_count;
+/*  心跳及空闲示例
+        $lifetimeTimer = \HttpForPHP\WorkerLifetimeTimer::instance(3, 15);
+        $lifetimeTimer->onHeartbeat = function () { //间隔数据库连接检测
+            Yii::$app->db->createCommand('select 1')->queryOne();
+            if(\Yii::$app->db_chain->getIsActive()) Yii::$app->db_chain->createCommand('select 1')->queryOne();
+
+            Yii::$app->redis->ping();
+            if(Yii::$app->redis3->getIsActive()) Yii::$app->redis3->ping();
+        };
+        $lifetimeTimer->onIdle = function () { //空闲释放
+            Yii::$app->db->close();
+            if(\Yii::$app->db_chain->getIsActive()) Yii::$app->db_chain->close();
+
+            Yii::$app->redis->close();
+            if(Yii::$app->redis3->getIsActive()) Yii::$app->redis3->close();
+        };
+        $lifetimeTimer->run();*/
+
         /**
          * 异步任务时$req是数组
          * @var \Workerman\Protocols\Http\Request|array $req
@@ -108,7 +126,7 @@ return [
     'setting' => [
         'count' => 20,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
         #'task_worker_num'=> 10, //异步任务进程数
-        'stdoutFile'=> __DIR__ . '/stdout.log', //终端输出
+        'stdoutFile'=> __DIR__ . '/http.log', //终端输出
         'pidFile' => __DIR__ . '/http.pid',
         'logFile' => __DIR__ . '/http.log', //日志文件
         # 'user' => 'www-data', //设置worker/task子进程的进程用户 提升服务器程序的安全性

@@ -4,7 +4,10 @@ namespace HttpForPHP;
 defined('SIGTERM') || define('SIGTERM', 15); //中止服务
 defined('SIGUSR1') || define('SIGUSR1', 10); //柔性重启
 defined('SIGRTMIN') || define('SIGRTMIN', 34); //SIGRTMIN信号重新打开日志文件
-
+if (!class_exists('Error')) { //兼容7.0
+    class Error extends \Exception{}
+}
+use Workerman\Timer;
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 
@@ -24,6 +27,34 @@ class WorkerManSrv {
     public static $instance;
     public static $command = '';
     const TYPE_HTTP = 'http';
+
+    /** 自定义间隔时钟
+     * @param int $msec 毫秒
+     * @param callable $callback
+     * @param array $args
+     * @return bool|int
+     */
+    public static function tick($msec, $callback, $args=[]){
+        return Timer::add(round($msec/1000,3), $callback, $args);
+    }
+    /** 自定义指定时间执行时钟
+     * @param $msec
+     * @param $callback
+     * @param array $args
+     * @return bool|int
+     */
+    public static function after($msec, $callback, $args=[]){
+        return Timer::add(round($msec/1000,3), $callback, $args, false);
+    }
+
+    /**清除定时器
+     * @param $timer_id
+     * @return bool
+     */
+    public static function clear($timer_id){
+        return Timer::del($timer_id);
+    }
+
     /**
      * SrvBase constructor.
      * @param array $config
