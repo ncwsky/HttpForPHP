@@ -84,7 +84,6 @@ class WorkerManSrv extends SrvBase {
         #引入框架配置
         $this->initMyPhp();
         self::$_SERVER = $_SERVER; //存放初始的$_SERVER
-        if($worker_id==0 && self::$isConsole) Log::write($_SERVER, 'server');
 
         //连接到内部通信服务
         $this->chainConnection($worker);
@@ -97,9 +96,7 @@ class WorkerManSrv extends SrvBase {
         Worker::safeEcho($err.PHP_EOL);
         //todo 记录日志或者发送报警的信息来提示开发者进行相应的处理
         self::err($err);
-        $this->onWorkerError($connection, $code, $msg);
     }
-    public function onWorkerError(TcpConnection $connection, $code, $msg){}
 
     //reloadable为false时 可以此重载回调重新载入配置等操作
     public function onWorkerReload(Worker2 $worker){
@@ -153,7 +150,7 @@ class WorkerManSrv extends SrvBase {
             $server->onWorkerReload = [$this, 'onWorkerReload'];
         }
         //当客户端的连接上发生错误时触发
-        $server->onError = [$this, 'onWorkerError'];
+        $server->onError = [$this, '_onWorkerError'];
 
         //主进程回调
         $this->onStart($server);
@@ -184,7 +181,7 @@ class WorkerManSrv extends SrvBase {
                 $taskWorker->onWorkerReload = [$this, 'onWorkerReload'];
             }
             //当客户端的连接上发生错误时触发
-            $taskWorker->onError = [$this, 'onWorkerError'];
+            $taskWorker->onError = [$this, '_onWorkerError'];
             $taskWorker->onConnect = function(TcpConnection $connection) use ($taskWorker){
                 $connection->send($taskWorker->id); //返回进程id
             };

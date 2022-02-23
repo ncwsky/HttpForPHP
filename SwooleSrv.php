@@ -76,7 +76,6 @@ class SwooleSrv extends SrvBase {
         echo $err,PHP_EOL;
         //todo 记录日志或者发送报警的信息来提示开发者进行相应的处理
         self::err($err);
-        $this->onWorkerError($server, $worker_id, $err);
     }
     //初始服务
     final public function init(){

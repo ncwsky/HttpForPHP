@@ -90,12 +90,6 @@ abstract class SrvBase {
     protected function onWorkerStart($server, $worker_id){
         //todo
     }
-    protected function onWorkerStop($server, $worker_id){
-        //todo
-    }
-    protected function onWorkerError($server, $worker_id, $err){
-        //todo
-    }
     /** 返回当前进程的id
      * @return int
      */
