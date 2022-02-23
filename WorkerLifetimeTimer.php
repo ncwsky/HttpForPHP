@@ -83,9 +83,11 @@ class WorkerLifetimeTimer
 
     protected function runTimer()
     {
-        if (WorkerManSrv::$isConsole) Worker::safeEcho(date("Y-m-d H:i:s") . ' worker:' . WorkerManSrv::$instance->server->id . ' timer start ' . PHP_EOL);
+        //$msg = ' worker:' . WorkerManSrv::$instance->server->id . ' timer start ';
+        //if (SrvBase::$isConsole) Worker::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
+        //else \HttpForPHP\Log::write($msg);
 
-        $this->timerId = WorkerManSrv::tick($this->timerMs, function () {
+        $this->timerId = SrvBase::$instance->server->tick($this->timerMs, function () {
             //if ($this->microtime == 0) return; //该进程没有任何请求
 
             $now_microtime = microtime(true);
@@ -100,8 +102,8 @@ class WorkerLifetimeTimer
                 if ($this->heartbeat_time > 0 && $this->onHeartbeat !== null && $diff >= $this->heartbeat_time) {
                     call_user_func($this->onHeartbeat);
 
-                    $msg = date("Y-m-d H:i:s") . ' worker:' . WorkerManSrv::$instance->server->id . ' heartbeat ';
-                    if (WorkerManSrv::$isConsole) Worker::safeEcho($msg . PHP_EOL);
+                    //$msg = date("Y-m-d H:i:s") . ' worker:' . WorkerManSrv::$instance->server->id . ' heartbeat ';
+                    //if (SrvBase::$isConsole) Worker::safeEcho($msg . PHP_EOL);
                 }
             } catch (\Exception $e) {
                 Log::write($e->getMessage(), 'onHeartbeat');
@@ -119,11 +121,11 @@ class WorkerLifetimeTimer
                     call_user_func($onIdle);
                     $this->isIdle = true;
 
-                    $msg = date("Y-m-d H:i:s") . ' worker:' . WorkerManSrv::$instance->server->id . ' onIdle to close, timer:' . $this->timerId . ' to clear';
-                    if (WorkerManSrv::$isConsole) Worker::safeEcho($msg . PHP_EOL);
-                    //else Log::write($msg, 'onIdle');
+                    //$msg = ' worker:' . WorkerManSrv::$instance->server->id . ' onIdle to close, timer:' . $this->timerId . ' to clear';
+                    //if (SrvBase::$isConsole) Worker::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
+                    //else \HttpForPHP\Log::write($msg);
 
-                    WorkerManSrv::clear($this->timerId); //空闲时清除定时器
+                    SrvBase::$instance->server->clear($this->timerId); //空闲时清除定时器
                     $this->timerId = 0;
                 }
             } catch (\Exception $e) {

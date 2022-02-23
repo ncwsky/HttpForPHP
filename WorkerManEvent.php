@@ -7,12 +7,9 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 
 class WorkerManEvent{
-    //有新的连接进入时， $fd 是连接的文件描述符
-    public static function onConnect(TcpConnection $connection){
-        $fd = $connection->id;
-    }
     //接收到数据时回调此函数
     public static function onReceive(TcpConnection $connection, Request $req){
+        static $request_count = 0;
         //重置
         $_SERVER = WorkerManSrv::$_SERVER; //使用初始的server
         $_COOKIE = $req->cookie();
@@ -72,33 +69,14 @@ class WorkerManEvent{
                 $code = 200;
                 $header = ['Content-Type'=>'application/json; charset=utf-8'];
                 $code = isset(Helper::$httpCodeStatus[$code]) ? $code : 200;
-                // 发送状态码
-                $response = new \Workerman\Protocols\Http\Response($code);
-                // 发送头部信息
-                $response->withHeaders($header);
-                // 发送内容
-                if (is_string($content)) {
-                    $content !== '' && $response->withBody($content);
-                } else {
-                    $response->withBody(toJson($content));
-                }
-                $connection->send($response);
+                // 发送http
+                WorkerManSrv::$instance->httpSend($connection, $code, $header, $content);
             }
         }
-    }
-    //客户端连接关闭事件
-    public static function onClose(TcpConnection $connection){
-
-    }
-    //当连接的应用层发送缓冲区满时触发
-    public static function onBufferFull(TcpConnection $connection){
-        //echo "bufferFull and do not send again\n";
-        $connection->pauseRecv(); //暂停接收
-    }
-    //当连接的应用层发送缓冲区数据全部发送完毕时触发
-    public static function onBufferDrain(TcpConnection $connection){
-        //echo "buffer drain and continue send\n";
-        $connection->resumeRecv(); //恢复接收
+        // 请求数达到xxx后退出当前进程，主进程会自动重启一个新的进程
+        if (WorkerManSrv::$instance->max_request > 0 && ++$request_count > WorkerManSrv::$instance->max_request) {
+            \Workerman\Worker::stopAll();
+        }
     }
     //异步任务 在task_worker进程内被调用
     public static function onTask($task_id, $src_worker_id, $data){

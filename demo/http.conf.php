@@ -4,8 +4,7 @@ return [
     'ip' => '0.0.0.0', //监听地址
     'port' => 6502, //监听地址
     'init_php'=> __DIR__.'/base.php',
-    'php_run'=> function($req, \Workerman\Connection\TcpConnection $connection=null) {
-        static $request_count;
+    'php_run'=> function($req, $connection=null) {
 /*  心跳及空闲示例
         $lifetimeTimer = \HttpForPHP\WorkerLifetimeTimer::instance(3, 15);
         $lifetimeTimer->onHeartbeat = function () { //间隔数据库连接检测
@@ -26,14 +25,13 @@ return [
 
         /**
          * 异步任务时$req是数组
-         * @var \Workerman\Protocols\Http\Request|array $req
+         * @var \Workerman\Protocols\Http\Request|swoole_http_request|array $req
          */
         ob_start();
         $app = Yii::$app;
-        $req_is_array = is_array($req);
 
         // 设置请求头
-        $headers = $req_is_array ? $req['header'] : $req->header();
+        $headers = \HttpForPHP\SrvBase::$instance->getHeader($req);
         if(isset($headers['accept'])){
             $headers['accept'] = str_replace('/xml','/json',$headers['accept']);
         }else{
@@ -50,7 +48,7 @@ return [
         $app->request->setUrl(null);
         $app->request->setQueryParams($_GET);
         $app->request->setBodyParams($_POST);
-        $app->request->setRawBody($req_is_array ? $req['rawbody'] : $req->rawBody());
+        $app->request->setRawBody(\HttpForPHP\SrvBase::$instance->getRawBody($req));
 
         $uri_name = trim($_SERVER["PATH_INFO"],'/');
 
@@ -69,7 +67,7 @@ return [
             foreach ($failReloadMsg as $fail){
                 if(strpos($msg, $fail)!==false){
                     \HttpForPHP\Log::write(sprintf('line:%s, file:%s, err:%s, trace:%s',$e->getLine(), $e->getFile(), $e->getMessage(), $e->getTraceAsString()), 'err');
-                    \Workerman\Worker::stopAll();
+                    \HttpForPHP\SrvBase::$instance->isWorkerMan ? \Workerman\Worker::stopAll() : \HttpForPHP\SrvBase::$instance->server->stop();
                     break;
                 }
             }
@@ -102,30 +100,18 @@ return [
                 }
             }
             $header['X-Req'] = 'demo';
-            // 发送状态码
-            $response = new \Workerman\Protocols\Http\Response($code);
-            // 发送头部信息
-            $response->withHeaders($header);
-            // 发送内容
-            if (is_string($content)) {
-                $content !== '' && $response->withBody($content);
-            } else {
-                $response->withBody(\HttpForPHP\toJson($content));
-            }
-            $connection->send($response);
+
+            // 发送http
+            \HttpForPHP\SrvBase::$instance->httpSend($connection, $code, $header, $content);
         }
         unset($content);
 
-        // 可能存在不规范的代码造成内存泄露 这里达到一定请求释放下内存
-        if(++$request_count > 200) {
-            // 请求数达到xxx后退出当前进程，主进程会自动重启一个新的进程
-            \Workerman\Worker::stopAll();
-        }
         return true;
     },
     'setting' => [
         'count' => 20,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100
         #'task_worker_num'=> 10, //异步任务进程数
+        'max_request'=> 500, //最大请求数 进程内达到此请求重启进程 可能存在不规范的代码造成内存泄露 这里达到一定请求释放下内存
         'stdoutFile'=> __DIR__ . '/http.log', //终端输出
         'pidFile' => __DIR__ . '/http.pid',
         'logFile' => __DIR__ . '/http.log', //日志文件

@@ -11,30 +11,17 @@ use Workerman\Timer;
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 
-class WorkerManSrv {
-    use SrvMsg;
-    //全局变量存放 仅当前的工作进程有效[参见进程隔离]
-    public static $_SERVER;
-    public static $isConsole = false;
-    public static $runConfig = null;
-    protected $config;
-    protected $runFile;
-    public $runDir;
-    protected $pidFile;
-    protected $address;
-    public $port;
-    protected $ip;
-    public static $instance;
-    public static $command = '';
-    const TYPE_HTTP = 'http';
-
+//增加定时处理的tick、after方法
+class Worker2 extends Worker{
+    public $channles = []; #记录worker用于通信
+    public $onTask = null; #task进程回调
     /** 自定义间隔时钟
      * @param int $msec 毫秒
      * @param callable $callback
      * @param array $args
      * @return bool|int
      */
-    public static function tick($msec, $callback, $args=[]){
+    public function tick($msec, $callback, $args=[]){
         return Timer::add(round($msec/1000,3), $callback, $args);
     }
     /** 自定义指定时间执行时钟
@@ -43,7 +30,7 @@ class WorkerManSrv {
      * @param array $args
      * @return bool|int
      */
-    public static function after($msec, $callback, $args=[]){
+    public function after($msec, $callback, $args=[]){
         return Timer::add(round($msec/1000,3), $callback, $args, false);
     }
 
@@ -51,60 +38,20 @@ class WorkerManSrv {
      * @param $timer_id
      * @return bool
      */
-    public static function clear($timer_id){
+    public function clear($timer_id){
         return Timer::del($timer_id);
     }
+}
 
-    /**
-     * SrvBase constructor.
-     * @param array $config
-     */
+class WorkerManSrv extends SrvBase {
+    public $isWorkerMan = true;
+    public $max_request = 0;
+    public $request_count = 0;
+
     public function __construct($config)
     {
-        self::$instance = $this;
-        $this->runFile = $_SERVER['SCRIPT_FILENAME'];
-        $this->runDir = dirname($this->runFile);
-        $this->config = $config;
-        $this->pidFile = $this->getConfig('setting.pidFile', $this->runDir .'/server.pid');
-        $this->ip = $this->getConfig('ip', '0.0.0.0');
-        $this->port = $this->getConfig('port', 7900);
-    }
-
-    public function getConfig($name, $def=''){
-        //获取值
-        if (false === ($pos = strpos($name, '.')))
-            return isset($this->config[$name]) ? $this->config[$name] : $def;
-        // 二维数组支持
-        $name1 = substr($name, 0, $pos);
-        $name2 = substr($name, $pos + 1);
-        return isset($this->config[$name1][$name2]) ? $this->config[$name1][$name2] : $def;
-    }
-    public function serverName(){
-        return $this->getConfig('name', basename($this->runFile,'.php'));
-    }
-    #引入框架代码初始
-    protected function initMyPhp(){
-        $initPhp = $this->getConfig('init_php', $this->runDir. '/base.php') ;
-        if(!is_file($initPhp)){
-            throw new \Exception('未配置要引入的运行文件');
-        }
-        include $initPhp;
-    }
-    public function phpRun($data, TcpConnection $connection=null){
-        $phpRun = $this->getConfig('php_run', $this->runDir. '/base.php');
-        if($phpRun instanceof \Closure){
-            return $phpRun($data, $connection);
-        }
-        throw new \Exception('未配置php_run匿名函数');
-    }
-    final protected function setProcessTitle($title){
-        // >=php 5.5
-        if (function_exists('cli_set_process_title')) {
-            cli_set_process_title($title);
-        } // Need proctitle when php<=5.5 .
-        elseif (extension_loaded('proctitle') && function_exists('setproctitle')) {
-            setproctitle($title);
-        }
+        parent::__construct($config);
+        $this->max_request = $this->getConfig('max_request', 0);
     }
 
     /****** 分隔线 ******/
@@ -115,11 +62,8 @@ class WorkerManSrv {
         //此回调有错误时 可能不会有主进程 只有通过管理进程进行结束
         return true;
     }
-    public function onWorkerStart($server, $worker_id){
-        //todo
-    }
     /**
-     * @var Worker $server
+     * @var Worker2 $server
      */
     public $server;
     public static $workers = null; //记录所有进程
@@ -130,12 +74,13 @@ class WorkerManSrv {
     public static $fdConnection = null;
 
     /** 此事件在Worker进程启动时发生 这里创建的对象可以在进程生命周期内使用 如mysql/redis...
-     * @param Worker $worker
+     * @param Worker2 $worker
      #* @param int $worker_id [0-$worker_num)区间内的数字
      * @return bool
      */
-    final public function _onWorkerStart(Worker $worker){
+    final public function _onWorkerStart(Worker2 $worker){
         $worker_id = $worker->id;
+        $this->request_count = 0; //重置请求统计数
         #引入框架配置
         $this->initMyPhp();
         self::$_SERVER = $_SERVER; //存放初始的$_SERVER
@@ -157,7 +102,7 @@ class WorkerManSrv {
     public function onWorkerError(TcpConnection $connection, $code, $msg){}
 
     //reloadable为false时 可以此重载回调重新载入配置等操作
-    public function onWorkerReload(Worker $worker){
+    public function onWorkerReload(Worker2 $worker){
         //todo
     }
     //初始服务
@@ -182,7 +127,7 @@ class WorkerManSrv {
         }
 
         //监听1024以下的端口需要root权限
-        $this->server = new Worker(self::TYPE_HTTP.'://'.$this->ip.':'.$this->port, $context);
+        $this->server = new Worker2(self::TYPE_HTTP.'://'.$this->ip.':'.$this->port, $context);
         $this->address = self::TYPE_HTTP;
         $this->address .= '://'.$this->ip.':'.$this->port;
 
@@ -214,15 +159,10 @@ class WorkerManSrv {
         $this->onStart($server);
 
         //绑定事件
-        $server->onConnect= ['\HttpForPHP\WorkerManEvent', 'onConnect'];
         $server->onMessage = ['\HttpForPHP\WorkerManEvent', 'onReceive'];
-        $server->onClose= ['\HttpForPHP\WorkerManEvent', 'onClose'];
-        $server->onBufferFull = ['\HttpForPHP\WorkerManEvent', 'onBufferFull'];
-        $server->onBufferDrain = ['\HttpForPHP\WorkerManEvent', 'onBufferDrain'];
 
         $server->onTask = null;
         if ($this->getConfig('setting.task_worker_num', 0) && !self::$taskWorker) { //启用了
-
             $server->onTask = function ($task_id, $src_worker_id, $data){
                 return WorkerManEvent::OnTask($task_id, $src_worker_id, $data);
             };
@@ -230,12 +170,13 @@ class WorkerManSrv {
             $taskPort = $this->getConfig('setting.task_port',  $this->port+100);
             self::$taskAddr = "127.0.0.1:".$taskPort;
             //创建异步任务进程
-            $taskWorker = new Worker('frame://'.self::$taskAddr);
+            $taskWorker = new Worker2('frame://'.self::$taskAddr);
             $taskWorker->ip = '127.0.0.1';
             $taskWorker->port = $taskPort;
             $taskWorker->user = $this->getConfig('setting.user', '');
             $taskWorker->name = $server->name.'_task';
             $taskWorker->count = $this->getConfig('setting.task_worker_num', 0); #unix://不支持多worker进程
+            $taskWorker->request_count = 0; //重置请求统计数
             //初始进程事件绑定
             $taskWorker->onWorkerStart = [$this, 'childWorkerStart'];
             if(!$this->getConfig('setting.reloadable', true)) { //不自动重启进程的reload处理
@@ -248,10 +189,15 @@ class WorkerManSrv {
                 $connection->send($taskWorker->id); //返回进程id
             };
             $taskWorker->onMessage = function ($connection, $data) use ($taskWorker) {
-                if($this->server->onTask){
+                static $request_count = 0;
+                if ($this->server->onTask) {
                     $src_worker_id = unpack('n', $data)[1];
-                    $data = unserialize(substr($data,2));
+                    $data = unserialize(substr($data, 2));
                     call_user_func($this->server->onTask, $taskWorker->id, $src_worker_id, $data);
+                    // 请求数达到xxx后退出当前进程，主进程会自动重启一个新的进程
+                    if ($this->max_request > 0 && ++$request_count > $this->max_request) {
+                        \Workerman\Worker::stopAll();
+                    }
                 }
             };
             self::$taskWorker = $taskWorker;
@@ -294,7 +240,7 @@ class WorkerManSrv {
         self::$remoteConnection->connect();
     }
     //
-    public function childWorkerStart(Worker $worker){
+    public function childWorkerStart(Worker2 $worker){
         $this->chainConnection($worker);
 
         $worker_id = $worker->id;
@@ -308,7 +254,7 @@ class WorkerManSrv {
         self::$command == 'start' && file_exists($socketFile) && @unlink($socketFile);
 
         self::$chainSocketFile = $socketFile;
-        $chainWorker = new Worker('unix://'.$socketFile);
+        $chainWorker = new Worker2('unix://'.$socketFile);
         $chainWorker->user = $this->getConfig('setting.user', '');
         $chainWorker->name = $this->serverName().'_chain';
         $chainWorker->protocol = '\Workerman\Protocols\Frame';
@@ -348,7 +294,7 @@ class WorkerManSrv {
         self::$chainWorker = $chainWorker;
     }
     //通道通信
-    public static function chainTo(Worker $worker, $fd, $data){
+    public static function chainTo(Worker2 $worker, $fd, $data){
         $data = ['a'=>$fd===-1?'all':'to','fd'=>$fd, 'raw'=>$data];
         echo PHP_EOL, 'workerId:'.$worker->id.', name:'.$worker->name.', port:'.$worker->port.', chain:'.( self::$remoteConnection ? 'has':'no'),PHP_EOL, PHP_EOL;
         self::$remoteConnection->send(serialize($data)); //内部通信-消息转发
@@ -437,17 +383,31 @@ class WorkerManSrv {
             return $taskId;
         }
     }
-    public function send($fd, $data){
-        $connection = $this->getConnection($fd);
-        if(!$connection){ //内部通信
-            self::chainTo($this->server, $fd, $data);
-            return true;
+
+    public function getHeader($req){
+        return is_array($req) ? $req['header'] : $req->header();
+    }
+    public function getRawBody($req){
+        return is_array($req) ? $req['rawbody'] : $req->rawBody();
+    }
+    /**
+     * @param TcpConnection $connection
+     * @param $code
+     * @param $header
+     * @param $content
+     */
+    public function httpSend($connection, $code, &$header, &$content){
+        // 发送状态码
+        $response = new \Workerman\Protocols\Http\Response($code);
+        // 发送头部信息
+        $response->withHeaders($header);
+        // 发送内容
+        if (is_string($content)) {
+            $content !== '' && $response->withBody($content);
+        } else {
+            $response->withBody(\HttpForPHP\toJson($content));
         }
-        //只要send不返回false并且网络没有断开，而且客户端接收正常，数据基本上可以看做100%能发到对方的。
-        if($connection){
-            return false!==$connection->send($data); //true null false
-        }
-        return false;
+        $connection->send($response);
     }
     public function close($fd){
         $connection = $this->getConnection($fd);
@@ -489,37 +449,13 @@ class WorkerManSrv {
         #$connection = isset($worker->connections[$fd]) ? $worker->connections[$fd] : null;
         return $connection;
     }
-    //初始服务之前执行
-    protected function beforeInit(){
-        //todo
-    }
-    //初始服务之后执行
-    protected function afterInit(){
-        //todo
-    }
-    //reload -g会等所有客户端连接断开后重启 stop -g会等所有客户端连接断开后关闭
-    public function start(){
-        $this->beforeInit();
-        //初始服务
-        $this->init();
-        $this->afterInit();
-        //启动
-        $this->exec();
-    }
+
     final public function relog(){
         Worker::$logFile && file_put_contents(Worker::$logFile, '', LOCK_EX);
         Worker::safeEcho('['.Worker::$logFile.'] relog ok!',PHP_EOL);
         return true;
     }
-    //检查进程pid是否存在
-    public function pid(){
-        if(file_exists($this->pidFile) && $pid = file_get_contents($this->pidFile)){
-            if(posix_kill($pid, 0)) { //检测进程是否存在，不会发送信号
-                return $pid;
-            }
-        }
-        return false;
-    }
+
     public function run(&$argv){
         $action = isset($argv[1]) ? $argv[1] : 'start';
         self::$isConsole = array_search('--console', $argv);

@@ -1,1 +1,5 @@
 Workerman
+/.idea
+/vendor
+*.log
+*.lock
