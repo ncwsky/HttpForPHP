@@ -3,8 +3,7 @@ namespace HttpForPHP;
 defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 
 class SwooleEvent{
-    public static function onRequest(swoole_http_request $request, swoole_http_response $response){
-        SrvBase::$isHttp = true;
+    public static function onRequest(\swoole_http_request $request, \swoole_http_response $response){
         $_SERVER = array_change_key_case($request->server,CASE_UPPER);
         $_COOKIE = $_FILES = $_REQUEST = $_POST = $_GET = [];
         if($request->cookie) $_COOKIE = &$request->cookie;
@@ -55,7 +54,7 @@ class SwooleEvent{
         }
     }
     //异步任务 在task_worker进程内被调用
-    public static function onTask(swoole_server $server, int $task_id, int $src_worker_id, $data){
+    public static function onTask(\swoole_server $server, int $task_id, int $src_worker_id, $data){
         //重置
         $_COOKIE = $data['_COOKIE'];
         $_FILES = $data['_FILES'];

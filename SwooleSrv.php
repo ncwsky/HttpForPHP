@@ -15,23 +15,27 @@ class SwooleSrv extends SrvBase {
         //兼容处理
         if (isset($this->config['setting']['pidFile'])) {
             $this->config['setting']['pid_file'] = $this->config['setting']['pidFile'];
+            unset($this->config['setting']['pidFile']);
         } else {
             $this->pidFile = $this->getConfig('setting.pid_file', $this->runDir . '/server.pid');
         }
         if (isset($this->config['setting']['logFile'])) {
             $this->config['setting']['log_file'] = $this->config['setting']['logFile'];
+            unset($this->config['setting']['logFile']);
         }
         if (isset($this->config['setting']['count'])) {
             $this->config['setting']['worker_num'] = $this->config['setting']['count'];
+            unset($this->config['setting']['count']);
         }
+        unset($this->config['setting']['stdoutFile']);
         $this->mode = SWOOLE_BASE;
     }
     //此事件在Server正常结束时发生
-    public function onShutdown(swoole_server $server){
+    public function onShutdown(\swoole_server $server){
         echo $this->serverName().' shutdown '.date("Y-m-d H:i:s"). PHP_EOL;
     }
     //管理进程 这里载入了php会造成与worker进程里代码冲突
-    public function _onManagerStart(swoole_server $server){
+    public function _onManagerStart(\swoole_server $server){
         $this->setProcessTitle($this->serverName() . '-manager');
 
         echo $this->serverName().' swoole'. SWOOLE_VERSION .' start '.date("Y-m-d H:i:s"). PHP_EOL;
@@ -41,11 +45,11 @@ class SwooleSrv extends SrvBase {
         echo 'run dir:'. $this->runDir . PHP_EOL;
     }
     //当管理进程结束时调用它
-    public function _onManagerStop(swoole_server $server){
+    public function _onManagerStop(\swoole_server $server){
         echo 'manager pid:' . $server->manager_pid . ' end' . PHP_EOL;
     }
     /** 此事件在Worker进程/Task进程启动时发生 这里创建的对象可以在进程生命周期内使用 如mysql/redis...
-     * @param swoole_server $server
+     * @param \swoole_server $server
      * @param int $worker_id [0-$worker_num)区间内的数字
      * @return bool
      */
@@ -65,13 +69,13 @@ class SwooleSrv extends SrvBase {
 
     //此函数主要用于报警和监控，一旦发现Worker进程异常退出，那么很有可能是遇到了致命错误或者进程CoreDump。通过记录日志或者发送报警的信息来提示开发者进行相应的处理
     /** 当Worker/Task进程发生异常后会在Manager进程内回调此函数
-     * @param swoole_server $server
+     * @param \swoole_server $server
      * @param int $worker_id 是异常进程的编号
      * @param int $worker_pid 是异常进程的ID
      * @param int $exit_code 退出的状态码，范围是 0～255
      * @param int $signal 进程退出的信号
      */
-    final public function _onWorkerError(swoole_server $server, $worker_id, $worker_pid, $exit_code, $signal){
+    final public function _onWorkerError(\swoole_server $server, $worker_id, $worker_pid, $exit_code, $signal){
         $err = '异常进程的编号:'.$worker_id.', 异常进程的ID:'.$worker_pid.', 退出的状态码:'.$exit_code.', 进程退出信号:'.$signal;
         echo $err,PHP_EOL;
         //todo 记录日志或者发送报警的信息来提示开发者进行相应的处理
@@ -88,7 +92,7 @@ class SwooleSrv extends SrvBase {
         }
 
         //监听1024以下的端口需要root权限
-        $this->server = new swoole_http_server($this->ip, $this->port, $this->mode, $sockType);
+        $this->server = new \swoole_http_server($this->ip, $this->port, $this->mode, $sockType);
         $this->address = self::TYPE_HTTP;
         $this->address .= '://'.$this->ip.':'.$this->port;
 
@@ -115,9 +119,13 @@ class SwooleSrv extends SrvBase {
 
         //事件
         if ($this->getConfig('setting.task_worker_num', 0)) { //启用了
-            $server->on('Task', 'SwooleEvent::onTask');
+            $server->on('Task', function ($server, $task_id, $src_worker_id, $data) {
+                SwooleEvent::onTask($server, $task_id, $src_worker_id, $data);
+            });
         }
-        $server->on('Request', 'SwooleEvent::onRequest');
+        $server->on('Request', function ($request, $response) {
+            SwooleEvent::onRequest($request, $response);
+        });
     }
     public function workerId(){
         return $this->server->worker_id;

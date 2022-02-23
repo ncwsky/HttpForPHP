@@ -9,7 +9,13 @@ class HttpSrv
     public static function run(&$argv, $config, $swoole = false)
     {
         if ($swoole) {
-            $srv = new SwooleSrv($config);
+            if (defined('SWOOLE_VERSION')) {
+                $srv = new SwooleSrv($config);
+            } elseif (self::workermanCheck()) {
+                $srv = new WorkerManSrv($config);
+            } else {
+                exit("Swolle: no install | Workerman: " . self::err());
+            }
         } else {
             //自动检测环境优先workerman
             if (self::workermanCheck()) {
