@@ -78,7 +78,6 @@ class WorkerManEvent{
         if (WorkerManSrv::$instance->max_request > 0 && ++$request_count > WorkerManSrv::$instance->max_request) {
             \Workerman\Worker::stopAll();
         }
-        Log::trace(WorkerManSrv::$instance->max_request.'--'.$request_count);
     }
     //异步任务 在task_worker进程内被调用
     public static function onTask($task_id, $src_worker_id, $data){
