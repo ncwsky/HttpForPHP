@@ -51,7 +51,7 @@ class WorkerManSrv extends SrvBase {
     public function __construct($config)
     {
         parent::__construct($config);
-        $this->max_request = $this->getConfig('max_request', 0);
+        $this->max_request = $this->getConfig('setting.max_request', 0);
     }
 
     /****** 分隔线 ******/
