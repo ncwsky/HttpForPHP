@@ -6,6 +6,8 @@ class HttpSrv
 {
     use SrvMsg;
 
+    const VERSION = '1.0';
+
     public static function run(&$argv, $config, $swoole = false)
     {
         $srvClass = [];
