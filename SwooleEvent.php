@@ -20,7 +20,23 @@ class SwooleEvent{
             Helper::$isProxy = true;
         }
 
-        Log::trace('[' . $_SERVER['REQUEST_METHOD'] . ']' . Helper::getIp() . ' ' . $_SERVER["REQUEST_URI"] . ($_SERVER['REQUEST_METHOD'] == 'POST' ? PHP_EOL . 'post:' . Helper::toJson($_POST) : ''));
+        $_SERVER['DOCUMENT_ROOT'] = dirname(SwooleSrv::$_SERVER['SCRIPT_FILENAME']);
+        $_SERVER['SCRIPT_FILENAME'] = $_SERVER['DOCUMENT_ROOT'].'/index.php';
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        $_SERVER['PHP_SELF'] = '/index.php';
+        if (isset($request->server['query_string']) && $request->server['query_string'] !== '') { //request_uri swoole不包含get参数
+            $_SERVER["REQUEST_URI"] = $request->server["request_uri"] . '?' . $request->server['query_string'];
+        }
+
+        //ip验证
+        if (!verify_ip()) {
+            Log::trace('[' . $_SERVER['REQUEST_METHOD'] . ']' . Helper::getIp() . ' ' . $_SERVER["REQUEST_URI"] . ($_SERVER['REQUEST_METHOD'] == 'POST' ? PHP_EOL . 'post:' . Helper::toJson($_POST) : ''));
+
+            $response->write(Helper::toJson(Helper::fail('ip fail')));
+            $response->end();
+            return;
+        }
+        //Log::trace($_SERVER);
 
         // 可在myphp::Run之前加上 用于post不指定url时通过post数据判断ca
         //if(!isset($_GET['c']) && isset($_POST['c'])) $_GET['c'] = $_POST['c'];
@@ -65,7 +81,7 @@ class SwooleEvent{
         #逻辑处理
         $content = SrvBase::$instance->phpRun($data);
 
-        if(SwooleSrv::$isConsole) echo "AsyncTask Finish:Connect.task_id=" . $task_id . (is_string($data) ? $data : toJson($data)).' result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL;
+        if(SwooleSrv::$isConsole) SrvBase::safeEcho("AsyncTask Finish:Connect.task_id=" . $task_id . (is_string($data) ? $data : toJson($data)).' result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL);
         unset($_COOKIE, $_FILES, $_GET, $_POST, $_REQUEST, $_SERVER);
         return true;
     }

@@ -83,9 +83,8 @@ class WorkerLifetimeTimer
 
     protected function runTimer()
     {
-        //$msg = ' worker:' . WorkerManSrv::$instance->server->id . ' timer start ';
-        //if (SrvBase::$isConsole) Worker::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
-        //else \HttpForPHP\Log::write($msg);
+        $msg = ' worker:' . SrvBase::$instance->workerId() . ' timer start ';
+        if (SrvBase::$isConsole) SrvBase::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
 
         $this->timerId = SrvBase::$instance->server->tick($this->timerMs, function () {
             //if ($this->microtime == 0) return; //该进程没有任何请求
@@ -102,8 +101,8 @@ class WorkerLifetimeTimer
                 if ($this->heartbeat_time > 0 && $this->onHeartbeat !== null && $diff >= $this->heartbeat_time) {
                     call_user_func($this->onHeartbeat);
 
-                    //$msg = date("Y-m-d H:i:s") . ' worker:' . WorkerManSrv::$instance->server->id . ' heartbeat ';
-                    //if (SrvBase::$isConsole) Worker::safeEcho($msg . PHP_EOL);
+                    $msg = date("Y-m-d H:i:s") . ' worker:' . SrvBase::$instance->workerId() . ' heartbeat ';
+                    if (SrvBase::$isConsole) SrvBase::safeEcho($msg . PHP_EOL);
                 }
             } catch (\Exception $e) {
                 Log::write($e->getMessage(), 'onHeartbeat');
@@ -121,11 +120,11 @@ class WorkerLifetimeTimer
                     call_user_func($onIdle);
                     $this->isIdle = true;
 
-                    //$msg = ' worker:' . WorkerManSrv::$instance->server->id . ' onIdle to close, timer:' . $this->timerId . ' to clear';
-                    //if (SrvBase::$isConsole) Worker::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
+                    $msg = ' worker:' . SrvBase::$instance->workerId() . ' onIdle to close, timer:' . $this->timerId . ' to clear';
+                    if (SrvBase::$isConsole) SrvBase::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
                     //else \HttpForPHP\Log::write($msg);
 
-                    SrvBase::$instance->server->clear($this->timerId); //空闲时清除定时器
+                    SrvBase::$instance->server->clearTimer($this->timerId); //空闲时清除定时器
                     $this->timerId = 0;
                 }
             } catch (\Exception $e) {

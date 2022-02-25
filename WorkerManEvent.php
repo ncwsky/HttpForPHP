@@ -91,7 +91,7 @@ class WorkerManEvent{
         #逻辑处理
         $content = WorkerManSrv::$instance->phpRun($data);
 
-        if(WorkerManSrv::$isConsole) Worker::safeEcho('AsyncTask Finish, worker_id:'.$src_worker_id.', task_id:' . $task_id . ', result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL);
+        if(WorkerManSrv::$isConsole) SrvBase::safeEcho('AsyncTask Finish, worker_id:'.$src_worker_id.', task_id:' . $task_id . ', result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL);
         return true;
     }
 }

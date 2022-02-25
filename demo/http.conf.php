@@ -67,7 +67,7 @@ return [
             foreach ($failReloadMsg as $fail){
                 if(strpos($msg, $fail)!==false){
                     \HttpForPHP\Log::write(sprintf('line:%s, file:%s, err:%s, trace:%s',$e->getLine(), $e->getFile(), $e->getMessage(), $e->getTraceAsString()), 'err');
-                    \HttpForPHP\SrvBase::$instance->isWorkerMan ? \Workerman\Worker::stopAll() : \HttpForPHP\SrvBase::$instance->server->stop();
+                    \HttpForPHP\SrvBase::$instance->stopWorker();
                     break;
                 }
             }
@@ -87,7 +87,7 @@ return [
         $app->response->clear();
 
         if($connection===null){ //是异步任务
-            \HttpForPHP\Log::write($content, 'task');
+            //\HttpForPHP\Log::write($content, 'task');
         }else{
             $code = 200;
             $header = ['Content-Type'=>'application/json; charset=utf-8','Access-Control-Allow-Origin'=>'*'];

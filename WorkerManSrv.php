@@ -25,8 +25,8 @@ class Worker2 extends Worker{
         return Timer::add(round($msec/1000,3), $callback, $args);
     }
     /** 自定义指定时间执行时钟
-     * @param $msec
-     * @param $callback
+     * @param int $msec
+     * @param callable $callback
      * @param array $args
      * @return bool|int
      */
@@ -35,10 +35,10 @@ class Worker2 extends Worker{
     }
 
     /**清除定时器
-     * @param $timer_id
+     * @param int $timer_id
      * @return bool
      */
-    public function clear($timer_id){
+    public function clearTimer($timer_id){
         return Timer::del($timer_id);
     }
 }
@@ -449,7 +449,7 @@ class WorkerManSrv extends SrvBase {
 
     final public function relog(){
         Worker::$logFile && file_put_contents(Worker::$logFile, '', LOCK_EX);
-        Worker::safeEcho('['.Worker::$logFile.'] relog ok!',PHP_EOL);
+        Worker::safeEcho('['.Worker::$logFile.'] relog ok!'.PHP_EOL);
         return true;
     }
 

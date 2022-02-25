@@ -1,9 +1,6 @@
 <?php
 namespace HttpForPHP;
 
-use Workerman\Connection\TcpConnection;
-use Workerman\Worker;
-
 defined('SIGTERM') || define('SIGTERM', 15); //中止服务
 defined('SIGUSR1') || define('SIGUSR1', 10); //柔性重启
 defined('SIGRTMIN') || define('SIGRTMIN', 34); //SIGRTMIN信号重新打开日志文件
@@ -84,12 +81,36 @@ abstract class SrvBase {
             setproctitle($title);
         }
     }
+    /**
+     * Safe Echo.
+     * @param string $msg
+     * @return bool
+     */
+    public static function safeEcho($msg)
+    {
+        $stream = \STDOUT;
+
+        $line = $white = $green = $end = '';
+        //输出装饰
+        $line = "\033[1A\n\033[K";
+        $white = "\033[47;30m";
+        $green = "\033[32;40m";
+        $end = "\033[0m";
+
+        $msg = \str_replace(array('<n>', '<w>', '<g>'), array($line, $white, $green), $msg);
+        $msg = \str_replace(array('</n>', '</w>', '</g>'), $end, $msg);
+
+        \fwrite($stream, $msg);
+        \fflush($stream);
+        return true;
+    }
 
     /****** 分隔线 ******/
     #woker进程回调
     protected function onWorkerStart($server, $worker_id){
         //todo
     }
+
     /** 返回当前进程的id
      * @return int
      */
@@ -144,23 +165,29 @@ abstract class SrvBase {
         $this->exec();
     }
     abstract public function relog();
+
+    // 结束当前worker进程
+    public function stopWorker(){
+        static::$instance->isWorkerMan ? \Workerman\Worker::stopAll() : static::$instance->server->stop();
+    }
+
     public function stop($sig=SIGTERM){
         if($pid=self::pid()){
-            echo "Stopping...",PHP_EOL;
+            static::safeEcho("Stopping...".PHP_EOL);
             if(posix_kill($pid, $sig)){ //15 可安全关闭(等待任务处理结束)服务器
                 sleep(1);
                 while(self::pid()){
-                    echo "Waiting for ". $this->serverName() ." to shutdown...",PHP_EOL;
+                    static::safeEcho("Waiting for ". $this->serverName() ." to shutdown...".PHP_EOL);
                     sleep(1);
                 }
                 file_exists($this->pidFile) && @unlink($this->pidFile);
-                echo $this->serverName()." stopped!",PHP_EOL;
+                static::safeEcho($this->serverName()." stopped!".PHP_EOL);
             }else{
-                echo 'PID:'.$pid.' stop fail!',PHP_EOL;
+                static::safeEcho('PID:'.$pid.' stop fail!'.PHP_EOL);
                 return false;
             }
         }else{
-            echo 'PID invalid! Process is not running.',PHP_EOL;
+            static::safeEcho('PID invalid! Process is not running.'.PHP_EOL);
         }
         return true;
     }
@@ -168,22 +195,22 @@ abstract class SrvBase {
         if($pid=self::pid()){
             $ret = posix_kill($pid, $sig); //10
             if($ret){
-                echo 'reload ok!',PHP_EOL;
+                static::safeEcho('reload ok!'.PHP_EOL);
                 return true;
             }else{
-                echo 'reload fail!',PHP_EOL;
+                static::safeEcho('reload fail!'.PHP_EOL);
             }
         }else{
-            echo 'PID invalid! Process is not running.',PHP_EOL;
+            static::safeEcho('PID invalid! Process is not running.'.PHP_EOL);
         }
         return false;
     }
     public function status(){
         if($pid=self::pid()){
-            echo $this->serverName().' (pid '.$pid.') is running...',PHP_EOL;
+            static::safeEcho($this->serverName().' (pid '.$pid.') is running...'.PHP_EOL);
             return true;
         }else{
-            echo $this->serverName()." is stopped",PHP_EOL;
+            static::safeEcho($this->serverName()." is stopped".PHP_EOL);
             return false;
         }
     }

@@ -32,21 +32,21 @@ class SwooleSrv extends SrvBase {
     }
     //此事件在Server正常结束时发生
     public function onShutdown(\swoole_server $server){
-        echo $this->serverName().' shutdown '.date("Y-m-d H:i:s"). PHP_EOL;
+        static::safeEcho($this->serverName() . ' shutdown ' . date("Y-m-d H:i:s") . PHP_EOL);
     }
     //管理进程 这里载入了php会造成与worker进程里代码冲突
     public function _onManagerStart(\swoole_server $server){
         $this->setProcessTitle($this->serverName() . '-manager');
 
-        echo $this->serverName().' swoole'. SWOOLE_VERSION .' start '.date("Y-m-d H:i:s"). PHP_EOL;
-        echo $this->address,PHP_EOL;
-        echo 'master pid:' . $server->master_pid . PHP_EOL;
-        echo 'manager pid:' . $server->manager_pid . PHP_EOL;
-        echo 'run dir:'. $this->runDir . PHP_EOL;
+        static::safeEcho($this->serverName() . ' swoole' . SWOOLE_VERSION . ' start ' . date("Y-m-d H:i:s") . PHP_EOL);
+        static::safeEcho($this->address . PHP_EOL);
+        static::safeEcho('master pid:' . $server->master_pid . PHP_EOL);
+        static::safeEcho('manager pid:' . $server->manager_pid . PHP_EOL);
+        static::safeEcho('run dir:' . $this->runDir . PHP_EOL);
     }
     //当管理进程结束时调用它
     public function _onManagerStop(\swoole_server $server){
-        echo 'manager pid:' . $server->manager_pid . ' end' . PHP_EOL;
+        static::safeEcho('manager pid:' . $server->manager_pid . ' end' . PHP_EOL);
     }
     /** 此事件在Worker进程/Task进程启动时发生 这里创建的对象可以在进程生命周期内使用 如mysql/redis...
      * @param \swoole_server $server
@@ -77,7 +77,7 @@ class SwooleSrv extends SrvBase {
      */
     final public function _onWorkerError(\swoole_server $server, $worker_id, $worker_pid, $exit_code, $signal){
         $err = '异常进程的编号:'.$worker_id.', 异常进程的ID:'.$worker_pid.', 退出的状态码:'.$exit_code.', 进程退出信号:'.$signal;
-        echo $err,PHP_EOL;
+        static::safeEcho($err . PHP_EOL);
         //todo 记录日志或者发送报警的信息来提示开发者进行相应的处理
         self::err($err);
     }
@@ -127,6 +127,7 @@ class SwooleSrv extends SrvBase {
             SwooleEvent::onRequest($request, $response);
         });
     }
+
     public function workerId(){
         return $this->server->worker_id;
     }
@@ -176,7 +177,7 @@ class SwooleSrv extends SrvBase {
         /*if($pid=self::pid()){
             posix_kill($pid, SIGRTMIN); //34  运行时日志不存在可重新打开日志文件
         }*/
-        echo '['.$logFile.'] relog ok!',PHP_EOL;
+        static::safeEcho('['.$logFile.'] relog ok!'.PHP_EOL);
         return true;
     }
     public function run(&$argv){
@@ -202,7 +203,7 @@ class SwooleSrv extends SrvBase {
                 break;
             case 'restart':
                 $this->stop();
-                echo "Start ".$this->serverName(),PHP_EOL;
+                static::safeEcho("Start ".$this->serverName().PHP_EOL);
                 $this->start();
                 break;
             case 'status':
@@ -210,15 +211,15 @@ class SwooleSrv extends SrvBase {
                 break;
             case 'start':
                 if($this->pid()){
-                    echo $this->pidFile." exists, ".$this->serverName()." is already running or crashed.",PHP_EOL;
-                    exit();
+                    static::safeEcho($this->pidFile." exists, ".$this->serverName()." is already running or crashed.".PHP_EOL);
+                    break;
                 }else{
-                    echo "Start ".$this->serverName(),PHP_EOL;
+                    static::safeEcho("Start ".$this->serverName().PHP_EOL);
                 }
                 $this->start();
                 break;
             default:
-                echo 'Usage: '. $this->runFile .' {([--console]|start[--console])|stop|restart[--console]|reload|relog|status}',PHP_EOL;
+                static::safeEcho('Usage: '. $this->runFile .' {([--console]|start[--console])|stop|restart[--console]|reload|relog|status}'.PHP_EOL);
         }
     }
 }
