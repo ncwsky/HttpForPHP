@@ -159,7 +159,7 @@ class WorkerManSrv extends SrvBase {
         $server->onMessage = ['\HttpForPHP\WorkerManEvent', 'onReceive'];
 
         $server->onTask = null;
-        if ($this->getConfig('setting.task_worker_num', 0) && !self::$taskWorker) { //启用了
+        if ($this->task_worker_num && !self::$taskWorker) { //启用了
             $server->onTask = function ($task_id, $src_worker_id, $data){
                 return WorkerManEvent::OnTask($task_id, $src_worker_id, $data);
             };
@@ -172,7 +172,7 @@ class WorkerManSrv extends SrvBase {
             $taskWorker->port = $taskPort;
             $taskWorker->user = $this->getConfig('setting.user', '');
             $taskWorker->name = $server->name.'_task';
-            $taskWorker->count = $this->getConfig('setting.task_worker_num', 0); #unix://不支持多worker进程
+            $taskWorker->count = $this->task_worker_num; #unix://不支持多worker进程
             $taskWorker->request_count = 0; //重置请求统计数
             //初始进程事件绑定
             $taskWorker->onWorkerStart = [$this, 'childWorkerStart'];
@@ -207,7 +207,7 @@ class WorkerManSrv extends SrvBase {
     public static $remoteConnection = null;
     //连接到内部通信服务
     protected function chainConnection($worker){
-        if(!$this->getConfig('setting.task_worker_num', 0)) return;
+        if(!$this->task_worker_num) return;
 
         //生成唯一id
         $uniqid = self::workerToUniqId($worker->port, $worker->id);

@@ -15,6 +15,7 @@ abstract class SrvBase {
     public static $isConsole = false;
     public static $runConfig = null;
     public $isWorkerMan = false;
+    public $task_worker_num = 0;
     /**
      * @var Worker2|swoole_http_server $server
      */
@@ -43,6 +44,7 @@ abstract class SrvBase {
         $this->pidFile = $this->getConfig('setting.pidFile', $this->runDir .'/server.pid');
         $this->ip = $this->getConfig('ip', '0.0.0.0');
         $this->port = $this->getConfig('port', 7900);
+        $this->task_worker_num = (int)$this->getConfig('setting.task_worker_num', 0);
     }
 
     public function getConfig($name, $def=''){

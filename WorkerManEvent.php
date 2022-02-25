@@ -43,7 +43,7 @@ class WorkerManEvent{
             return;
         }
 
-        if (Q(ASYNC_NAME .'%d')==1) { //异步任务
+        if (WorkerManSrv::$instance->task_worker_num && Q(ASYNC_NAME .'%d')==1) { //异步任务
             $task_id = WorkerManSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,

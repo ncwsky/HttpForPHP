@@ -118,7 +118,7 @@ class SwooleSrv extends SrvBase {
         });
 
         //事件
-        if ($this->getConfig('setting.task_worker_num', 0)) { //启用了
+        if ($this->task_worker_num) { //启用了
             $server->on('Task', function ($server, $task_id, $src_worker_id, $data) {
                 SwooleEvent::onTask($server, $task_id, $src_worker_id, $data);
             });
