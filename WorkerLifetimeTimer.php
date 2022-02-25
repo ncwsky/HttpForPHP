@@ -83,9 +83,6 @@ class WorkerLifetimeTimer
 
     protected function runTimer()
     {
-        $msg = ' worker:' . SrvBase::$instance->workerId() . ' timer start ';
-        if (SrvBase::$isConsole) SrvBase::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
-
         $this->timerId = SrvBase::$instance->server->tick($this->timerMs, function () {
             //if ($this->microtime == 0) return; //该进程没有任何请求
 
@@ -131,5 +128,8 @@ class WorkerLifetimeTimer
                 Log::write($e->getMessage(), 'onIdle');
             }
         });
+
+        $msg = ' worker:' . SrvBase::$instance->workerId() . ' timer ' . $this->timerId . ' start';
+        if (SrvBase::$isConsole) SrvBase::safeEcho(date("Y-m-d H:i:s") . $msg . PHP_EOL);
     }
 }
