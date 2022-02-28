@@ -46,7 +46,6 @@ class Worker2 extends Worker{
 class WorkerManSrv extends SrvBase {
     public $isWorkerMan = true;
     public $max_request = 0;
-    public $request_count = 0;
 
     public function __construct($config)
     {
@@ -80,7 +79,6 @@ class WorkerManSrv extends SrvBase {
      */
     final public function _onWorkerStart(Worker2 $worker){
         $worker_id = $worker->id;
-        $this->request_count = 0; //重置请求统计数
         #引入框架配置
         $this->initMyPhp();
         self::$_SERVER = $_SERVER; //存放初始的$_SERVER
@@ -173,7 +171,6 @@ class WorkerManSrv extends SrvBase {
             $taskWorker->user = $this->getConfig('setting.user', '');
             $taskWorker->name = $server->name.'_task';
             $taskWorker->count = $this->task_worker_num; #unix://不支持多worker进程
-            $taskWorker->request_count = 0; //重置请求统计数
             //初始进程事件绑定
             $taskWorker->onWorkerStart = [$this, 'childWorkerStart'];
             if(!$this->getConfig('setting.reloadable', true)) { //不自动重启进程的reload处理
@@ -193,7 +190,7 @@ class WorkerManSrv extends SrvBase {
                     call_user_func($this->server->onTask, $taskWorker->id, $src_worker_id, $data);
                     // 请求数达到xxx后退出当前进程，主进程会自动重启一个新的进程
                     if ($this->max_request > 0 && ++$request_count > $this->max_request) {
-                        \Workerman\Worker::stopAll();
+                        Worker::stopAll();
                     }
                 }
             };
