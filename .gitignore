@@ -1,6 +1,6 @@
 Workerman
 /.idea
-/vendor
+vendor
 *.log
 *.lock
 *.pid

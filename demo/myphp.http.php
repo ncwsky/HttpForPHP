@@ -2,7 +2,7 @@
 return [
     'name' => 'myphp-Demo', //服务名
     'ip' => '0.0.0.0', //监听地址
-    'port' => 6502, //监听地址
+    'port' => 55011, //监听地址
     'init_php' => __DIR__ . '/myphp.base.php',
     'setting' => [
         'count' => 1,    // 异步非阻塞CPU核数的1-4倍最合理 同步阻塞按实际情况来填写 如50-100

@@ -3,9 +3,7 @@ declare(strict_types=1);
 
 namespace HttpForPHP;
 
-define('BASE_PATH', __DIR__);
 #define('LOG_PATH', __DIR__.'/log'); #日志目录
-#is_file(BASE_PATH . '/config.php') && Config::load(BASE_PATH . '/config.php'); //引入默认配置文件
 
 class Helper{
     const CODE_OK = 0; //成功
