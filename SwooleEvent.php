@@ -41,7 +41,7 @@ class SwooleEvent{
         // 可在myphp::Run之前加上 用于post不指定url时通过post数据判断ca
         //if(!isset($_GET['c']) && isset($_POST['c'])) $_GET['c'] = $_POST['c'];
         //if(!isset($_GET['a']) && isset($_POST['a'])) $_GET['a'] = $_POST['a'];
-        if (SwooleSrv::$instance->task_worker_num && Q(ASYNC_NAME .'%d')==1) { //异步任务
+        if (SwooleSrv::$instance->task_worker_num && !empty($_REQUEST[ASYNC_NAME])) { //异步任务
             $task_id = SwooleSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,
@@ -79,7 +79,7 @@ class SwooleEvent{
         $_REQUEST = $data['_REQUEST'];
         $_SERVER = $data['_SERVER'];
         #逻辑处理
-        $content = SrvBase::$instance->phpRun($data);
+        $content = SwooleSrv::$instance->phpRun($data);
 
         if(SwooleSrv::$isConsole) SrvBase::safeEcho("AsyncTask Finish:Connect.task_id=" . $task_id . (is_string($data) ? $data : toJson($data)).' result:'. (is_string($content) ? $content : toJson($content)). PHP_EOL);
         unset($_COOKIE, $_FILES, $_GET, $_POST, $_REQUEST, $_SERVER);

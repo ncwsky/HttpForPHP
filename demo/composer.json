@@ -1,0 +1,5 @@
+{
+    "require": {
+        "myphps/myphp": "^1.17"
+    }
+}

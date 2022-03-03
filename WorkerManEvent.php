@@ -2,7 +2,6 @@
 namespace HttpForPHP;
 defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 
-use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
 
@@ -17,6 +16,7 @@ class WorkerManEvent{
         $_GET = $req->get();
         $_POST = $req->post();
         $_REQUEST = array_merge($_GET, $_POST);
+        //$_SESSION = $req->session()->all();
         $_SERVER['REMOTE_ADDR'] = $connection->getRemoteIp();
         $_SERVER['REQUEST_METHOD'] = $req->method();
         foreach ($req->header() as $k=>$v){
@@ -43,7 +43,7 @@ class WorkerManEvent{
             return;
         }
 
-        if (WorkerManSrv::$instance->task_worker_num && Q(ASYNC_NAME .'%d')==1) { //异步任务
+        if (WorkerManSrv::$instance->task_worker_num && !empty($_REQUEST[ASYNC_NAME])) { //异步任务
             $task_id = WorkerManSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,

@@ -12,23 +12,23 @@ class SwooleSrv extends SrvBase {
     public function __construct($config)
     {
         parent::__construct($config);
-        //兼容处理
-        if (isset($this->config['setting']['pidFile'])) {
-            $this->config['setting']['pid_file'] = $this->config['setting']['pidFile'];
-            unset($this->config['setting']['pidFile']);
-        } else {
-            $this->pidFile = $this->getConfig('setting.pid_file', $this->runDir . '/server.pid');
-        }
-        if (isset($this->config['setting']['logFile'])) {
-            $this->config['setting']['log_file'] = $this->config['setting']['logFile'];
-            unset($this->config['setting']['logFile']);
-        }
-        if (isset($this->config['setting']['count'])) {
-            $this->config['setting']['worker_num'] = $this->config['setting']['count'];
-            unset($this->config['setting']['count']);
-        }
-        unset($this->config['setting']['stdoutFile']);
         $this->mode = SWOOLE_BASE;
+        $config = &$this->config;
+        //兼容处理
+        if (isset($config['setting']['pidFile'])) {
+            $config['setting']['pid_file'] = $config['setting']['pidFile'];
+            unset($config['setting']['pidFile']);
+        }
+        if (isset($config['setting']['logFile'])) {
+            $config['setting']['log_file'] = $config['setting']['logFile'];
+            unset($config['setting']['logFile']);
+        }
+        if (isset($config['setting']['count'])) {
+            $config['setting']['worker_num'] = $config['setting']['count'];
+            unset($config['setting']['count']);
+        }
+        unset($config['setting']['stdoutFile']);
+        $this->pidFile = $this->getConfig('setting.pid_file', $this->runDir . '/server.pid');
     }
     //此事件在Server正常结束时发生
     public function onShutdown(\swoole_server $server){

@@ -68,20 +68,68 @@ abstract class SrvBase {
         include $initPhp;
     }
     public function phpRun($req, $res=null){
-        $phpRun = $this->getConfig('php_run', $this->runDir. '/base.php');
-        if($phpRun instanceof \Closure){
+        $phpRun = $this->getConfig('php_run', 'request_php_run');
+        if($phpRun instanceof \Closure || function_exists($phpRun)){
             return call_user_func($phpRun, $req, $res);
         }
-        throw new \Exception('未配置php_run匿名函数');
+        throw new \Exception('未配置php_run匿名函数或未定义request_php_run函数');
     }
     final protected function setProcessTitle($title){
         // >=php 5.5
         if (function_exists('cli_set_process_title')) {
-            cli_set_process_title($title);
+            @cli_set_process_title($title);
         } // Need proctitle when php<=5.5 .
         elseif (extension_loaded('proctitle') && function_exists('setproctitle')) {
-            setproctitle($title);
+            @setproctitle($title);
         }
+    }
+    //workerman环境检测
+    public static function workermanCheck()
+    {
+        if(\DIRECTORY_SEPARATOR !== '\\'){ //非win
+            if (!in_array("pcntl", get_loaded_extensions())) {
+                self::err('Extension pcntl check fail');
+                return false;
+            }
+            if (!in_array("posix", get_loaded_extensions())) {
+                self::err('Extension posix check fail');
+                return false;
+            }
+        }
+
+        $check_func_map = array(
+            "stream_socket_server",
+            "stream_socket_accept",
+            "stream_socket_client",
+            "pcntl_signal_dispatch",
+            "pcntl_signal",
+            "pcntl_alarm",
+            "pcntl_fork",
+            "posix_getuid",
+            "posix_getpwuid",
+            "posix_kill",
+            "posix_setsid",
+            "posix_getpid",
+            "posix_getpwnam",
+            "posix_getgrnam",
+            "posix_getgid",
+            "posix_setgid",
+            "posix_initgroups",
+            "posix_setuid",
+            "posix_isatty",
+        );
+        // 获取php.ini中设置的禁用函数
+        if ($disable_func_string = ini_get("disable_functions")) {
+            $disable_func_map = array_flip(explode(",", $disable_func_string));
+        }
+        // 遍历查看是否有禁用的函数
+        foreach ($check_func_map as $func) {
+            if (isset($disable_func_map[$func])) {
+                self::err("Function $func may be disabled. Please check disable_functions in php.ini\nsee http://www.workerman.net/doc/workerman/faq/disable-function-check.html\n");
+                return false;
+            }
+        }
+        return true;
     }
     /**
      * Safe Echo.

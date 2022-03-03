@@ -96,10 +96,6 @@ class Log{
 			self::write($logs, null);
 			self::$logs = null;
 		}
-		if(!IS_CLI && SRV_DEBUG && $e){
-			ob_end_clean();
-			exit('<pre style="color:#c10;">'.$stack.'</pre>');
-		}
 	}
 	//自定义错误记录 用于 set_error_handler
 	public static function UserErr($errno, $errstr, $errfile, $errline){
@@ -153,10 +149,6 @@ class Log{
         }
         self::$errflag=true;
         self::$errs[] = date('[Y-m-d H:i:s]').'[error] '.$err."\n";
-        // 发送404信息
-        //header('HTTP/1.1 404 Not Found');
-        //header('Status:404 Not Found');
-		if(SRV_DEBUG) echo '<pre>'.$err.'</pre>';
 	}
 	public static function miniREQ(){
         $postStr = file_get_contents("php://input");

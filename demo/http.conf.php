@@ -89,16 +89,21 @@ return [
         if($connection===null){ //是异步任务
             //\HttpForPHP\Log::write($content, 'task');
         }else{
-            $code = 200;
-            $header = ['Content-Type'=>'application/json; charset=utf-8','Access-Control-Allow-Origin'=>'*'];
-            if($_SERVER["PATH_INFO"]=='/default/qrcode'){
-                if($app->request->get('data')){
-                    $header['Content-Type'] = 'image/png';
-                    if($app->request->get('down')){
-                        $header['Content-Disposition'] = 'attachment;filename=qr.png';
-                    }
+            $code = \Yii::$app->response->getStatusCode();
+            $header = ['Access-Control-Allow-Origin' => '*']; //'Content-Type'=>'application/json; charset=utf-8',
+            if (\Yii::$app->response->headers->count()) { //header头处理
+                \Yii::$app->response->headers->set('Access-Control-Allow-Origin', '*');
+                foreach (\Yii::$app->response->headers as $name => $values) {
+                    if (strpos($name, 'pagination') !== false) continue;
+                    $name = str_replace(' ', '-', ucwords(str_replace('-', ' ', $name)));
+                    $header[$name] = end($values);
                 }
+                unset($header['Link']);
+            } else {
+                $header['Content-Type'] = 'application/json; charset=utf-8';
             }
+            //\HttpForPHP\Log::write($code.' '. $_SERVER["REQUEST_URI"]);
+            //\HttpForPHP\Log::write($header);
             $header['X-Req'] = 'demo';
 
             // 发送http
