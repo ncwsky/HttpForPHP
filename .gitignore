@@ -3,3 +3,4 @@ Workerman
 /vendor
 *.log
 *.lock
+*.pid
