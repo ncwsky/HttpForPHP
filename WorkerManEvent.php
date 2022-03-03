@@ -1,6 +1,5 @@
 <?php
 namespace HttpForPHP;
-defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 
 use Workerman\Connection\TcpConnection;
 use Workerman\Protocols\Http\Request;
@@ -43,7 +42,7 @@ class WorkerManEvent{
             return;
         }
 
-        if (WorkerManSrv::$instance->task_worker_num && !empty($_REQUEST[ASYNC_NAME])) { //异步任务
+        if (WorkerManSrv::$instance->task_worker_num && isset($_REQUEST[ASYNC_NAME]) && $_REQUEST[ASYNC_NAME]==1) { //异步任务
             $task_id = WorkerManSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,

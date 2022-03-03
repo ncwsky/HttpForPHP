@@ -364,18 +364,18 @@ class WorkerManSrv extends SrvBase {
         if (!$fp) {
             self::err("$errstr ($errno)");
             return false;
-        } else {
-            $worker_id = $this->server->id;
-            $taskId = (int)substr(fread($fp, 10), 4);
-            $send_data = serialize($data);
-            $len = 4 + 2 + strlen($send_data);
-            $send_data = pack('N', $len) . pack('n', $worker_id) . $send_data;
-            if (!fwrite($fp, $send_data, $len)) {
-                $taskId = false;
-            }
-            fclose($fp);
-            return $taskId;
         }
+        //stream_set_blocking($fp, false); //非阻塞模式
+        $worker_id = $this->server->id;
+        $taskId = (int)substr(fread($fp, 10), 4);
+        $send_data = serialize($data);
+        $len = 4 + 2 + strlen($send_data);
+        $send_data = pack('N', $len) . pack('n', $worker_id) . $send_data;
+        if (!fwrite($fp, $send_data, $len)) {
+            $taskId = false;
+        }
+        fclose($fp);
+        return $taskId;
     }
 
     public function getHeader($req){

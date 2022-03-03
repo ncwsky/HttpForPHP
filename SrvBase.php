@@ -4,6 +4,7 @@ namespace HttpForPHP;
 defined('SIGTERM') || define('SIGTERM', 15); //中止服务
 defined('SIGUSR1') || define('SIGUSR1', 10); //柔性重启
 defined('SIGRTMIN') || define('SIGRTMIN', 34); //SIGRTMIN信号重新打开日志文件
+defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 if (!class_exists('Error')) { //兼容7.0
     class Error extends \Exception{}
 }

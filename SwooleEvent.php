@@ -1,6 +1,5 @@
 <?php
 namespace HttpForPHP;
-defined('ASYNC_NAME') || define('ASYNC_NAME', 'async');
 
 class SwooleEvent{
     public static function onRequest(\swoole_http_request $request, \swoole_http_response $response){
@@ -41,7 +40,7 @@ class SwooleEvent{
         // 可在myphp::Run之前加上 用于post不指定url时通过post数据判断ca
         //if(!isset($_GET['c']) && isset($_POST['c'])) $_GET['c'] = $_POST['c'];
         //if(!isset($_GET['a']) && isset($_POST['a'])) $_GET['a'] = $_POST['a'];
-        if (SwooleSrv::$instance->task_worker_num && !empty($_REQUEST[ASYNC_NAME])) { //异步任务
+        if (SwooleSrv::$instance->task_worker_num && isset($_REQUEST[ASYNC_NAME]) && $_REQUEST[ASYNC_NAME]==1) { //异步任务
             $task_id = SwooleSrv::$instance->task([
                 '_COOKIE'=>$_COOKIE,
                 '_FILES'=>$_FILES,
