@@ -37,7 +37,7 @@ class Log{
 	public static function Init($logDir=null, $level=0, $size=2097152){
 		if(!self::$instance) self::$instance = new self();
 
-		self::$logDir = $logDir ? (substr($logDir,-1)==DS?$logDir:$logDir.DS) : LOG_PATH.DS;
+		self::$logDir = $logDir ? (substr($logDir,-1)=='/'?$logDir:$logDir.'/') : LOG_PATH.'/';
         !file_exists(self::$logDir) && mkdir(self::$logDir, 0755, true);
 		self::$file = self::$logDir.'log.log';
 		self::$instance->handler[self::$dir] = fopen(self::$file,'a');
@@ -86,7 +86,6 @@ class Log{
 			self::$errs[] = $stack = date('[Y-m-d H:i:s]').'[error] type:'.$e['type'].', line:'.$e['line'].', file:'.$e['file'].', message:'.$e['message']."\n";
 		}
 		if(self::$errflag){ //主日志记录错误信息
-			!IS_CLI && self::$errs[] = Log::REQ();
 			$logs = implode('', self::$errs);
 			self::write($logs, '_def');
 			self::$errs = null;
@@ -143,12 +142,7 @@ class Log{
      */
 	public static function Exception($e, $out=true){
 		$err = $e->getMessage()."\n".'line:'.$e->getLine().', file:'.$e->getFile()."\n".$e->getTraceAsString();
-		if(IS_CLI || !$out){
-		    self::WARN($err);
-		    return;
-        }
-        self::$errflag=true;
-        self::$errs[] = date('[Y-m-d H:i:s]').'[error] '.$err."\n";
+        self::WARN($err);
 	}
 	public static function miniREQ(){
         $postStr = file_get_contents("php://input");
@@ -197,13 +191,7 @@ class Log{
 	}
 	//记录日志 建议优先使用
 	public static function trace($msg,$level='trace'){
-		if(IS_CLI){
-			self::write($msg, $level);
-		}else{
-			if(!self::_level($level)) return false;
-            if(!is_scalar($msg)) $msg = toJson($msg);
-			self::$logs[] = date('[Y-m-d H:i:s]').'['.$level.'] '.$msg."\r\n";
-		}
+        self::write($msg, $level);
 	}
 	//写入日志
 	public static function write($msg,$level='trace',$file=null){

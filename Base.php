@@ -3,12 +3,8 @@ declare(strict_types=1);
 
 namespace HttpForPHP;
 
-//系统变量
-define('IS_CLI', PHP_SAPI == 'cli');
-define('DS', '/');
 define('BASE_PATH', __DIR__);
 #define('LOG_PATH', __DIR__.'/log'); #日志目录
-
 #is_file(BASE_PATH . '/config.php') && Config::load(BASE_PATH . '/config.php'); //引入默认配置文件
 
 class Helper{
@@ -166,14 +162,6 @@ class Helper{
     public static $isProxy = false;
     //获取用户真实地址 返回用户ip  type:0 返回IP地址 1 返回IPV4地址数字
     public static function getIp($type=0) {
-        /*static $realIP;
-        if (!IS_CLI && isset($realIP)) {
-            return $realIP[$type == 0 ? 0 : 1];
-        }*/
-        //重置ipv6
-        //if(isset($_SERVER['REMOTE_ADDR']) && filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)){
-        //  $_SERVER['REMOTE_ADDR']='127.0.0.1';
-        //}
         $realIP = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
         if(self::$isProxy){
             if (isset($_SERVER['HTTP_X_REAL_IP'])) {
