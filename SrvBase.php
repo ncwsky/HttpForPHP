@@ -62,6 +62,9 @@ abstract class SrvBase {
     }
     #引入框架代码初始
     protected function initMyPhp(){
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
+        }
         $initPhp = $this->getConfig('init_php', $this->runDir. '/base.php') ;
         if(!is_file($initPhp)){
             throw new \Exception('未配置要引入的运行文件');
