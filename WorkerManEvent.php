@@ -17,6 +17,7 @@ class WorkerManEvent{
         $_REQUEST = array_merge($_GET, $_POST);
         //$_SESSION = $req->session()->all();
         $_SERVER['REMOTE_ADDR'] = $connection->getRemoteIp();
+        $_SERVER['REMOTE_PORT'] = $connection->getRemotePort();
         $_SERVER['REQUEST_METHOD'] = $req->method();
         foreach ($req->header() as $k=>$v){
             $k = ($k == 'content-type' || $k == 'content-length' ? '' : 'HTTP_') . str_replace('-', '_', strtoupper($k));
